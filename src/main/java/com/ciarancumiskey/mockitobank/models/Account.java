@@ -25,14 +25,19 @@ public class Account {
     // Use BigDecimal because double isn't precise enough
     @NonNull BigDecimal balance;
     @NonNull BigDecimal overdraftLimit;
+    String emailAddress;
+    //todo: transaction history
+    //todo: password
 
-    public Account(final String sortCode, final String accountName, final String accountNumber) {
+    public Account(@NonNull final String sortCode, @NonNull final String accountName,
+                   @NonNull final String accountNumber, final String emailAddress) {
         this.accountName = accountName;
         this.accountNumber = accountNumber;
         this.sortCode = sortCode;
         this.ibanCode = "%s%s%s".formatted(MOCKITO_BANK_IBAN_PREFIX, sortCode, accountNumber);
         this.balance = BigDecimal.ZERO;
         this.overdraftLimit = BigDecimal.ZERO;
+        this.emailAddress = emailAddress;
     }
 
     protected Account(){
