@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class AccountTest {
 
     //TODO: Create mock DB
+    //TODO: Create mock service
 
     @BeforeAll
     static void setUp() {
@@ -43,7 +44,9 @@ public class AccountTest {
                 Arguments.of("123456", "Joe Bloggs", "12345678", "IE94MOCK12345612345678"),
                 Arguments.of("654321", "Jacqui Bloggs", "87650987", "IE94MOCK65432187650987"),
                 Arguments.of("065432", "James Bloggs", "08765098", "IE94MOCK06543208765098"),
-                Arguments.of("012345", "Jane Bloggs", "12345678", "IE94MOCK01234512345678")
+                Arguments.of("012345", "Jane Bloggs", "12345678", "IE94MOCK01234512345678"),
+                Arguments.of("012345", "Anne-Marie Bloggs", "12345670", "IE94MOCK01234512345670"),
+                Arguments.of("656767", "Jean-Paul Bloggs", "02345678", "IE94MOCK65676702345678")
         );
     }
 

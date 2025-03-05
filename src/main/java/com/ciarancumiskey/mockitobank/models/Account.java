@@ -18,9 +18,9 @@ import static com.ciarancumiskey.mockitobank.utils.Constants.MOCKITO_BANK_IBAN_P
 @Entity
 public class Account {
     // accountNumber and sortCode could start with a 0
-    @Id @NonNull String accountNumber;
+    @Id @NonNull String ibanCode;
+    @NonNull String accountNumber;
     @NonNull String sortCode;
-    @NonNull String ibanCode;
     @NonNull String accountName;
     // Use BigDecimal because double isn't precise enough
     @NonNull BigDecimal balance;
