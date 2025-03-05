@@ -1,5 +1,6 @@
 package com.ciarancumiskey.mockitobank.models;
 
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Slf4j
 public class AccountTest {
 
     //TODO: Create mock DB
@@ -26,6 +28,7 @@ public class AccountTest {
     @ParameterizedTest
     @MethodSource("createAccountsParameters")
     void createAccounts(final String sortCode, final String accountName, final String accountNumber, final String expectedIbanCode) {
+        log.info("Creating account for {}", accountName);
         Account newAccount = new Account(sortCode, accountName, accountNumber);
         assertEquals(accountName, newAccount.getAccountName());
         assertEquals(accountNumber, newAccount.getAccountNumber());
@@ -44,6 +47,7 @@ public class AccountTest {
         );
     }
 
+    // TODO:
     @Test
     void deposit() {
     }
