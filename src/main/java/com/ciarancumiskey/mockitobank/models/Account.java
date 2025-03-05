@@ -13,7 +13,8 @@ import static com.ciarancumiskey.mockitobank.utils.Constants.MOCKITO_BANK_IBAN_P
 @Setter
 @Slf4j
 public class Account {
-    @NonNull long accountNumber;
+    // accountNumber and sortCode could start with a 0
+    @NonNull String accountNumber;
     @NonNull String sortCode;
     @NonNull String ibanCode;
     @NonNull String accountName;
@@ -21,7 +22,7 @@ public class Account {
     @NonNull BigDecimal balance;
     @NonNull BigDecimal overdraftLimit;
 
-    public Account(final String sortCode, final String accountName, final long accountNumber) {
+    public Account(final String sortCode, final String accountName, final String accountNumber) {
         this.accountName = accountName;
         this.accountNumber = accountNumber;
         this.sortCode = sortCode;
