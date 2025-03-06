@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import java.net.URI;
+import java.util.List;
 
 import static com.ciarancumiskey.mockitobank.utils.Constants.ACCOUNT_PATH;
 import static com.ciarancumiskey.mockitobank.utils.Constants.REGISTRATION_PATH;
@@ -23,6 +24,9 @@ public class AccountController {
     @PostMapping(value = REGISTRATION_PATH, consumes = "application/json", produces = "application/json")
     public ResponseEntity<Account> createAccount(@NonNull @RequestBody final AccountCreationRequest accountCreationRequest){
         final Account newAccount = accountService.createAccount(accountCreationRequest.getSortCode(), accountCreationRequest.getAccountName(), accountCreationRequest.getAccountNumber(), accountCreationRequest.getEmailAddress());
+        if(newAccount == null) {
+            return ResponseEntity.badRequest().build();
+        }
         final URI newAccountLocation = URI.create(ACCOUNT_PATH + "/" + newAccount.getIbanCode());
         return ResponseEntity.created(newAccountLocation).body(newAccount);
     }

@@ -29,14 +29,11 @@ public class AccountServiceTests {
     @InjectMocks
     AccountService mockAccountService;
 
-    @BeforeAll
-    static void setUp() {
-
-    }
-
     @ParameterizedTest
     @MethodSource("createAccountsParameters")
-    void createAccounts(final String sortCode, final String accountName, final String accountNumber, final String emailAddress, final String expectedIbanCode) {
+    void createAccounts(final String sortCode, final String accountName, final String expectedAccountName,
+                        final String accountNumber, final String emailAddress, final String expectedEmailAddress,
+                        final String expectedIbanCode) {
         log.info("Creating account for {}", accountName);
 
         // Create the Account object to test with
@@ -60,6 +57,8 @@ public class AccountServiceTests {
 
         // Additional check for the values if necessary
         assertEquals(expectedIbanCode, foundAccount.getIbanCode());
+        assertEquals(expectedAccountName, foundAccount.getAccountName());
+        assertEquals(expectedEmailAddress, foundAccount.getEmailAddress());
     }
 
     private static Stream<Arguments> createAccountsParameters() {
