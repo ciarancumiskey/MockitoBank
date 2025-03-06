@@ -18,6 +18,7 @@ public class AccountService {
 
     public Account createAccount(final String sortCode, final String accountName, final String accountNumber, final String emailAddress){
         log.info("Creating new account for {}", accountName);
+        //TODO: Validation
         final Account newAccount = new Account(sortCode, accountName, accountNumber, emailAddress);
         accountDbRepository.save(newAccount);
         return newAccount;

@@ -34,7 +34,7 @@ public class AccountControllerTests {
 
     @ParameterizedTest
     @MethodSource("createAccountsParameters")
-    void createAccounts(final String sortCode, final String accountName, final String accountNumber, final String emailAddress, final String expectedIbanCode) {
+    void createAccountsTest(final String sortCode, final String accountName, final String accountNumber, final String emailAddress, final String expectedIbanCode) {
         final MockHttpServletRequest request = new MockHttpServletRequest();
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
         final Account expectedAccount = new Account(sortCode, accountName, accountNumber, emailAddress);
@@ -43,10 +43,22 @@ public class AccountControllerTests {
         when(accountService.createAccount(any(String.class),any(String.class),any(String.class),any(String.class))).thenReturn(expectedAccount);
 
         final ResponseEntity<Account> createdAccountResponse = accountMvc.createAccount(accountCreationReq);
+        assertThat(createdAccountResponse.getStatusCode()).isEqualTo(HttpStatusCode.valueOf(201));
+        validateAccount(createdAccountResponse, expectedIbanCode, accountNumber, sortCode, accountName, emailAddress);
+    }
+
+    @ParameterizedTest
+    @MethodSource("createAccountsParameters")
+    void getAccountsTest(final String sortCode, final String accountName, final String accountNumber, final String emailAddress, final String expectedIbanCode) {
+        final MockHttpServletRequest request = new MockHttpServletRequest();
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        final Account expectedAccount = new Account(sortCode, accountName, accountNumber, emailAddress);
+        expectedAccount.setIbanCode(expectedIbanCode);
+        when(accountService.findAccountByIban(any(String.class))).thenReturn(expectedAccount);
+
+        final ResponseEntity<Account> createdAccountResponse = accountMvc.getAccount(expectedIbanCode);
         assertThat(createdAccountResponse.getStatusCode()).isEqualTo(HttpStatusCode.valueOf(200));
-        final Account createdAccount = createdAccountResponse.getBody();
-        assertNotNull(createdAccount);
-        assertEquals(expectedIbanCode, createdAccount.getIbanCode());
+        validateAccount(createdAccountResponse, expectedIbanCode, accountNumber, sortCode, accountName, emailAddress);
     }
 
     private static Stream<Arguments> createAccountsParameters() {
@@ -56,7 +68,20 @@ public class AccountControllerTests {
                 TestConstants.USER_3_ARGS,
                 TestConstants.USER_4_ARGS,
                 TestConstants.USER_5_ARGS,
-                TestConstants.USER_6_ARGS
+                TestConstants.USER_6_ARGS,
+                TestConstants.USER_WO_EMAIL_ARGS
         );
+    }
+
+    private static void validateAccount(final ResponseEntity<Account> accountResponse,
+                                        final String expectedIbanCode, final String accountNumber,
+                                        final String sortCode, final String accountName, final String emailAddress){
+        final Account createdAccount = accountResponse.getBody();
+        assertNotNull(createdAccount);
+        assertEquals(expectedIbanCode, createdAccount.getIbanCode());
+        assertEquals(accountNumber, createdAccount.getAccountNumber());
+        assertEquals(sortCode, createdAccount.getSortCode());
+        assertEquals(accountName, createdAccount.getAccountName());
+        assertEquals(emailAddress, createdAccount.getEmailAddress());
     }
 }

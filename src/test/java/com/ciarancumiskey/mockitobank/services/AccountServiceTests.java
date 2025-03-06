@@ -69,7 +69,8 @@ public class AccountServiceTests {
                 TestConstants.USER_3_ARGS,
                 TestConstants.USER_4_ARGS,
                 TestConstants.USER_5_ARGS,
-                TestConstants.USER_6_ARGS
+                TestConstants.USER_6_ARGS,
+                TestConstants.USER_WO_EMAIL_ARGS
         );
     }
 }
