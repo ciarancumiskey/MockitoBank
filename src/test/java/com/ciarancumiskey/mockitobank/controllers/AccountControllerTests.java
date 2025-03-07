@@ -2,6 +2,7 @@ package com.ciarancumiskey.mockitobank.controllers;
 
 import com.ciarancumiskey.mockitobank.models.Account;
 import com.ciarancumiskey.mockitobank.models.AccountCreationRequest;
+import com.ciarancumiskey.mockitobank.models.AccountUpdateRequest;
 import com.ciarancumiskey.mockitobank.services.AccountService;
 import com.ciarancumiskey.mockitobank.utils.TestConstants;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,8 +23,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.when;
@@ -66,6 +66,9 @@ public class AccountControllerTests {
 
         final ResponseEntity<Account> createdAccountResponse = accountMvc.createAccount(accountCreationReq);
         assertEquals(HttpStatus.BAD_REQUEST, createdAccountResponse.getStatusCode());
+
+        final Account accountFromDb = accountService.findAccountByIban(expectedIban);
+        assertNull(accountFromDb);
     }
 
     @ParameterizedTest
@@ -77,12 +80,35 @@ public class AccountControllerTests {
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
         final Account expectedAccount = new Account(sortCode, accountName, accountNumber, emailAddress);
         expectedAccount.setIbanCode(expectedIbanCode);
-        when(accountService.findAccountByIban(any(String.class))).thenReturn(expectedAccount);
+        when(accountService.findAccountByIban(expectedIbanCode)).thenReturn(expectedAccount);
 
         final ResponseEntity<Account> createdAccountResponse = accountMvc.getAccount(expectedIbanCode);
         assertThat(createdAccountResponse.getStatusCode()).isEqualTo(HttpStatusCode.valueOf(200));
         validateAccount(createdAccountResponse, expectedIbanCode, accountNumber, sortCode, expectedAccountName,
                 expectedEmailAddress);
+    }
+
+    @ParameterizedTest
+    @MethodSource("updateAccountsParameters")
+    void updateAccountsTest(final String originalIban, final String expectedUpdatedIban, final String existingSortCode,
+                            final String newSortCode, final String existingAcNumber, final String newAcNumber,
+                            final String existingName, final String newName, final String expectedNewName,
+                            final String existingEmailAddress, final String newEmailAddress,
+                            final String expectedNewEmailAddress){
+        final MockHttpServletRequest request = new MockHttpServletRequest();
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        final Account expectedOriginalAccount = new Account(existingSortCode, existingName, existingAcNumber, existingEmailAddress);
+        expectedOriginalAccount.setIbanCode(originalIban);
+        when(accountService.findAccountByIban(originalIban)).thenReturn(expectedOriginalAccount);
+
+        final ResponseEntity<Account> createdAccountResponse = accountMvc.getAccount(originalIban);
+        assertThat(createdAccountResponse.getStatusCode()).isEqualTo(HttpStatusCode.valueOf(200));
+        validateAccount(createdAccountResponse, originalIban, existingAcNumber, existingSortCode, existingName,
+                existingEmailAddress);
+
+        final AccountUpdateRequest acUpdateRequest = new AccountUpdateRequest(originalIban, newSortCode, newAcNumber, newName, newEmailAddress);
+        final ResponseEntity.HeadersBuilder<?> accountUpdateResponse = accountMvc.updateAccount(acUpdateRequest);
+
     }
 
     private static Stream<Arguments> createAccountsParameters() {
@@ -103,7 +129,18 @@ public class AccountControllerTests {
 
     private static Stream<Arguments> createInvalidAccountParameters() {
         return Stream.of(
-                TestConstants.USER_INVALID_SORT_CODE_5_NUMS
+                TestConstants.USER_INVALID_SORT_CODE_5_NUMS,
+                TestConstants.USER_INVALID_SORT_CODE_7_NUMS,
+                TestConstants.USER_INVALID_AC_NUMBER_7_NUMS,
+                TestConstants.USER_INVALID_AC_NUMBER_9_NUMS
+        );
+    }
+
+    private static Stream<Arguments> updateAccountsParameters() {
+        return Stream.of(
+                Arguments.of(TestConstants.IBAN_1, TestConstants.UPDATED_IBAN_1, "123456", "234567", "12345678",
+                        "12345678", "Joe Bloggs", "Joseph Bloggs ", "Joseph Bloggs", "jb@blahmail.com",
+                        "jb@blahmail.com", "jb@blahmail.com")
         );
     }
 

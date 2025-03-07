@@ -4,6 +4,7 @@ import org.junit.jupiter.params.provider.Arguments;
 
 public class TestConstants {
     public static final String IBAN_1 = "IE94MOCK12345612345678";
+    public static final String UPDATED_IBAN_1 = "IE94MOCK23456712345678";
     public static final String IBAN_2 = "IE94MOCK65432187650987";
     public static final String IBAN_3 = "IE94MOCK06543208765098";
     public static final String IBAN_4 = "IE94MOCK01234512345678";
@@ -14,7 +15,10 @@ public class TestConstants {
     public static final String IBAN_WHITESPACE_1 = "IE94MOCK65676732345679";
     public static final String IBAN_WHITESPACE_2 = "IE94MOCK65676632345679";
     public static final String IBAN_WHITESPACE_3 = "IE94MOCK65676642345679";
-    public static final String IBAN_FAIL_1 = "IE94MOCK55676642345679";
+    public static final String IBAN_FAIL_1 = "IE94MOCK1234512345678";
+    public static final String IBAN_FAIL_2 = "IE94MOCK123456712345678";
+    public static final String IBAN_FAIL_3 = "IE94MOCK1234561234567";
+    public static final String IBAN_FAIL_4 = "IE94MOCK123456123456789";
 
     public static final Arguments USER_1_ARGS = Arguments.of("123456", "Joe Bloggs", "Joe Bloggs", "12345678",
             "jb@blahmail.com", "jb@blahmail.com", IBAN_1);
@@ -28,7 +32,7 @@ public class TestConstants {
             "12345670", "am.bloggs@ipsummail.fr", "am.bloggs@ipsummail.fr", IBAN_5);
     public static final Arguments USER_6_ARGS = Arguments.of("656767", "Jean-Paul Bloggs", "Jean-Paul Bloggs",
             "02345678", "jp.bloggs@blahpost.ca", "jp.bloggs@blahpost.ca", IBAN_6);
-    // Try creating a user without an email address
+    // Try creating a user without an email address or with an improper email address
     public static final Arguments USER_WO_EMAIL_ARGS = Arguments.of("656767", "John Smith", "John Smith", "02345679",
             "", "", IBAN_WO_EMAIL);
     public static final Arguments USER_INVALID_EMAIL_ARGS = Arguments.of("656767", "Jeremy Usbourne    ",
@@ -41,5 +45,8 @@ public class TestConstants {
             "42345679", "mark.corrigan@jlbcredit.co.uk", "mark.corrigan@jlbcredit.co.uk", IBAN_WHITESPACE_3);
 
     // Error cases
-    public static final Arguments USER_INVALID_SORT_CODE_5_NUMS = Arguments.of("12345", "Test 1", "12345678", "", IBAN_FAIL_1);
+    public static final Arguments USER_INVALID_SORT_CODE_5_NUMS = Arguments.of("12345", "Test 1", "12345678", "John Jackson", IBAN_FAIL_1);
+    public static final Arguments USER_INVALID_SORT_CODE_7_NUMS = Arguments.of("1234567", "Test 2", "12345678", "Jack Johnson", IBAN_FAIL_2);
+    public static final Arguments USER_INVALID_AC_NUMBER_7_NUMS = Arguments.of("123456", "Test 3", "1234567", "Maire Ni Ceallaigh", IBAN_FAIL_3);
+    public static final Arguments USER_INVALID_AC_NUMBER_9_NUMS = Arguments.of("123456", "Test 4", "123456789", "", IBAN_FAIL_4);
 }

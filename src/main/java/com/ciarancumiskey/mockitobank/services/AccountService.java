@@ -2,6 +2,7 @@ package com.ciarancumiskey.mockitobank.services;
 
 import com.ciarancumiskey.mockitobank.database.AccountDbRepository;
 import com.ciarancumiskey.mockitobank.models.Account;
+import com.ciarancumiskey.mockitobank.models.AccountUpdateRequest;
 import com.ciarancumiskey.mockitobank.utils.Constants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,33 +25,39 @@ public class AccountService {
             return null;
         }
         final Account newAccount = new Account(sortCode, accountName, accountNumber, emailAddress);
+        // TODO: Verify that this account doesn't exist yet
         accountDbRepository.save(newAccount);
         return newAccount;
     }
 
-    public Account updateAccount(final String existingIbanCode, final String sortCode, final String accountName, final String accountNumber,
-                                 final String emailAddress){
+    public Account updateAccount(final AccountUpdateRequest accountUpdateRequest){
+        final String existingIbanCode = accountUpdateRequest.getAccountIban();
         log.info("Updating account for {}", existingIbanCode);
         final Optional<Account> accountToUpdate = accountDbRepository.findById(existingIbanCode);
         if(accountToUpdate.isEmpty()){
             return null;
         } else {
             final Account account = accountToUpdate.get();
+            final String accountName = accountUpdateRequest.getAccountName();
+            // The update might have missing details, so just skip those missing attributes
             if(accountName.isBlank()) {
                log.error("Updated customer name can't be blank.");
             } else {
                 account.setAccountName(accountName);
             }
+            final String sortCode = accountUpdateRequest.getSortCode();
             if(SORT_CODE_REGEX.matcher(sortCode).find()){
                 account.setSortCode(sortCode);
             } else {
                 log.error("A sort code must be a sequence of 6 digits (0-9) only.");
             }
+            final String accountNumber = accountUpdateRequest.getAccountNumber();
             if(ACCOUNT_NUMBER_REGEX.matcher(accountNumber).find()){
                 account.setAccountNumber(accountNumber);
             } else {
                 log.error("An account number must be a sequence of 8 digits (0-9) only.");
             }
+            final String emailAddress = accountUpdateRequest.getEmailAddress();
             if(EMAIL_REGEX.matcher(emailAddress).find()){
                 account.setEmailAddress(emailAddress);
             } else if (EMAIL_REGEX.matcher(emailAddress.trim()).find()) {
