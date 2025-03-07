@@ -12,8 +12,6 @@ import org.springframework.lang.NonNull;
 @Setter
 public class AccountUpdateRequest {
     @NonNull private String accountIban;
-    private String sortCode;
     private String accountName;
-    private String accountNumber;
     private String emailAddress;
 }

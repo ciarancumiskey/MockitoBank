@@ -25,9 +25,15 @@ public class AccountService {
             return null;
         }
         final Account newAccount = new Account(sortCode, accountName, accountNumber, emailAddress);
-        // TODO: Verify that this account doesn't exist yet
-        accountDbRepository.save(newAccount);
-        return newAccount;
+        // Verify that the new account doesn't clash with an existing one
+        final String newAccountIban = newAccount.getIbanCode();
+        if(findAccountByIban(newAccountIban) == null){
+            accountDbRepository.save(newAccount);
+            return newAccount;
+        } else {
+            log.error("Account with IBAN {} already exists", newAccountIban);
+            return null;
+        }
     }
 
     public Account updateAccount(final AccountUpdateRequest accountUpdateRequest){
@@ -44,18 +50,6 @@ public class AccountService {
                log.error("Updated customer name can't be blank.");
             } else {
                 account.setAccountName(accountName);
-            }
-            final String sortCode = accountUpdateRequest.getSortCode();
-            if(SORT_CODE_REGEX.matcher(sortCode).find()){
-                account.setSortCode(sortCode);
-            } else {
-                log.error("A sort code must be a sequence of 6 digits (0-9) only.");
-            }
-            final String accountNumber = accountUpdateRequest.getAccountNumber();
-            if(ACCOUNT_NUMBER_REGEX.matcher(accountNumber).find()){
-                account.setAccountNumber(accountNumber);
-            } else {
-                log.error("An account number must be a sequence of 8 digits (0-9) only.");
             }
             final String emailAddress = accountUpdateRequest.getEmailAddress();
             if(EMAIL_REGEX.matcher(emailAddress).find()){

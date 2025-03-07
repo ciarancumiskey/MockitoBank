@@ -36,14 +36,9 @@ public class AccountServiceTests {
                         final String expectedIbanCode) {
         log.info("Creating account for {}", accountName);
 
-        // Create the Account object to test with
-        final Account createdAccount = new Account(sortCode, accountName, accountNumber, emailAddress);
-
-        // Mock the repository's findById method to return the account for the given IBAN code
-        when(mockAccountDb.findById(expectedIbanCode)).thenReturn(Optional.of(createdAccount));
-
         // Call the service method that should save the account
         Account account = mockAccountService.createAccount(sortCode, accountName, accountNumber, emailAddress);
+        when(mockAccountDb.findById(expectedIbanCode)).thenReturn(Optional.of(account));
 
         // Assert that the account is correctly created
         assertNotNull(account);
@@ -51,6 +46,31 @@ public class AccountServiceTests {
 
         // Verify that the save method was called on the repository
         verify(mockAccountDb, times(1)).save(account);
+        // Assert: Verify that the account is not null when retrieved via findById
+        final Account foundAccount = mockAccountDb.findById(expectedIbanCode).orElseThrow();
+        assertNotNull(foundAccount);
+
+        // Additional check for the values if necessary
+        assertEquals(expectedIbanCode, foundAccount.getIbanCode());
+        assertEquals(expectedAccountName, foundAccount.getAccountName());
+        assertEquals(expectedEmailAddress, foundAccount.getEmailAddress());
+    }
+
+    @ParameterizedTest
+    @MethodSource("createAccountsParameters")
+    void createDuplicateAccounts(final String sortCode, final String accountName, final String expectedAccountName,
+                        final String accountNumber, final String emailAddress, final String expectedEmailAddress,
+                        final String expectedIbanCode) {
+        log.info("Creating account for {}", accountName);
+
+        final Account originalAccount = new Account(sortCode, accountName, accountNumber, emailAddress);
+        when(mockAccountDb.findById(expectedIbanCode)).thenReturn(Optional.of(originalAccount));
+
+        // Call the service method that should save the account
+        Account account = mockAccountService.createAccount(sortCode, accountName, accountNumber, emailAddress);
+        // Verify that "save" was never called, but "findById" was
+        verify(mockAccountDb, times(0)).save(account);
+        verify(mockAccountDb, times(1)).findById(expectedIbanCode);
         // Assert: Verify that the account is not null when retrieved via findById
         final Account foundAccount = mockAccountDb.findById(expectedIbanCode).orElseThrow();
         assertNotNull(foundAccount);

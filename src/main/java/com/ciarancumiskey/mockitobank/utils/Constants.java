@@ -9,6 +9,8 @@ public class Constants {
     // Controllers
     public final static String ACCOUNT_PATH = "/accounts";
     public final static String REGISTRATION_PATH = "/register";
+    public final static String LOAD_ACCOUNT_PATH = "/load/{accountIban}";
+    public final static String UPDATE_ACCOUNT_PATH = "/update";
 
     // Regex
     public final static Pattern SORT_CODE_REGEX = Pattern.compile("[0-9]{6}");
