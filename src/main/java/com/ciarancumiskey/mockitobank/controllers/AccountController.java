@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.net.URI;
 
 @RestController
@@ -18,7 +19,7 @@ public class AccountController {
     @Autowired private AccountService accountService;
 
     @PostMapping(value = Constants.REGISTRATION_PATH, consumes = "application/json", produces = "application/json")
-    public ResponseEntity<Account> createAccount(@NonNull @RequestBody final AccountCreationRequest accountCreationRequest){
+    public ResponseEntity<Account> createAccount(@NonNull @RequestBody @Valid final AccountCreationRequest accountCreationRequest){
         final Account newAccount = accountService.createAccount(accountCreationRequest.getSortCode(), accountCreationRequest.getAccountName(), accountCreationRequest.getAccountNumber(), accountCreationRequest.getEmailAddress());
         if(newAccount == null) {
             return ResponseEntity.badRequest().build();
@@ -36,13 +37,13 @@ public class AccountController {
         return ResponseEntity.ok(retrievedAccount);
     }
 
-    @PutMapping(value = Constants.UPDATE_ACCOUNT_PATH, consumes = "application/json", produces = "application/json")
-    public ResponseEntity.HeadersBuilder<?> updateAccount(@RequestBody final AccountUpdateRequest accountCreationRequest){
-        final Account updatedAccount = accountService.updateAccount(accountCreationRequest);
+    @PutMapping(value = Constants.UPDATE_ACCOUNT_PATH, consumes = "application/json")
+    public ResponseEntity<String> updateAccount(@RequestBody @Valid final AccountUpdateRequest accountUpdateRequest){
+        final Account updatedAccount = accountService.updateAccount(accountUpdateRequest);
         if(updatedAccount == null) {
-            return ResponseEntity.badRequest();
+            return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.noContent();
+        return ResponseEntity.noContent().build();
     }
     // TODO: Delete
 }

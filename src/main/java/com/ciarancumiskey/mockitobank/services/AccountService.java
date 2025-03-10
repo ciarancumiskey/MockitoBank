@@ -38,11 +38,12 @@ public class AccountService {
 
     public Account updateAccount(final AccountUpdateRequest accountUpdateRequest){
         final String existingIbanCode = accountUpdateRequest.getAccountIban();
-        log.info("Updating account for {}", existingIbanCode);
         final Optional<Account> accountToUpdate = accountDbRepository.findById(existingIbanCode);
         if(accountToUpdate.isEmpty()){
+            log.error("No account found with IBAN {}", existingIbanCode);
             return null;
         } else {
+            log.info("Updating account for {}", existingIbanCode);
             final Account account = accountToUpdate.get();
             final String accountName = accountUpdateRequest.getAccountName();
             // The update might have missing details, so just skip those missing attributes

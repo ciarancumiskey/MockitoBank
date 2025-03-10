@@ -7,18 +7,23 @@ import com.ciarancumiskey.mockitobank.services.AccountService;
 import com.ciarancumiskey.mockitobank.utils.Constants;
 import com.ciarancumiskey.mockitobank.utils.TestConstants;
 import com.ciarancumiskey.mockitobank.utils.TestUtils;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -30,9 +35,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@RunWith(SpringRunner.class)
+//@SpringBootTest
+@Slf4j
 @WebMvcTest(AccountController.class)
 public class AccountControllerTests {
 
@@ -53,15 +60,11 @@ public class AccountControllerTests {
         when(accountService.createAccount(any(String.class),any(String.class),any(String.class),any(String.class)))
                 .thenReturn(expectedAccount);
 
-        accountMockMvc.perform(MockMvcRequestBuilders.post(Constants.ACCOUNT_PATH + Constants.REGISTRATION_PATH)
+        MvcResult createAcMvcResult = accountMockMvc.perform(MockMvcRequestBuilders.post(Constants.ACCOUNT_PATH + Constants.REGISTRATION_PATH)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(TestUtils.asJsonString(accountCreationReq)))
-                .andExpect(status().isCreated());
-                //.andExpect(MockMvcResultMatchers.content().json());
-//        final ResponseEntity<Account> createdAccountResponse = accountMvc.createAccount(accountCreationReq);
-//        assertEquals(HttpStatus.CREATED, createdAccountResponse.getStatusCode());
-//        validateAccount(createdAccountResponse, expectedIbanCode, accountNumber, sortCode, expectedAccountName,
-//                expectedEmailAddress);
+                .andExpect(status().isCreated()).andReturn();
+        //todo validate response
     }
 
     @ParameterizedTest
@@ -98,7 +101,7 @@ public class AccountControllerTests {
                         .content(TestUtils.asJsonString(accountCreationReq))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
-
+        //Verify that the account hasn't been created
         final Account accountFromDb = accountService.findAccountByIban(expectedIban);
         assertNull(accountFromDb);
     }
@@ -112,12 +115,10 @@ public class AccountControllerTests {
         expectedAccount.setIbanCode(expectedIbanCode);
         when(accountService.findAccountByIban(expectedIbanCode)).thenReturn(expectedAccount);
 
-        accountMockMvc.perform(MockMvcRequestBuilders.get(Constants.ACCOUNT_PATH + Constants.LOAD_ACCOUNT_PATH.replace("{accountIban}", expectedIbanCode))
+        MvcResult accountGetMvcResult = accountMockMvc.perform(MockMvcRequestBuilders.get(Constants.ACCOUNT_PATH + Constants.LOAD_ACCOUNT_PATH.replace("{accountIban}", expectedIbanCode))
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-//        assertThat(createdAccountResponse.getStatusCode()).isEqualTo(HttpStatusCode.valueOf(200));
-//        validateAccount(createdAccountResponse, expectedIbanCode, accountNumber, sortCode, expectedAccountName,
-                //expectedEmailAddress);
+                .andExpect(status().isOk()).andReturn();
+        //todo validate content
     }
 
     @ParameterizedTest
@@ -126,19 +127,28 @@ public class AccountControllerTests {
                             final String existingName, final String newName, final String expectedNewName,
                             final String existingEmailAddress, final String newEmailAddress,
                             final String expectedNewEmailAddress) throws Exception {
-        final MockHttpServletRequest request = new MockHttpServletRequest();
-        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
         final Account expectedOriginalAccount = new Account(existingSortCode, existingName, existingAcNumber, existingEmailAddress);
         expectedOriginalAccount.setIbanCode(originalIban);
         when(accountService.findAccountByIban(originalIban)).thenReturn(expectedOriginalAccount);
 
         final AccountUpdateRequest accountUpdateRequest = new AccountUpdateRequest(originalIban, newName, newEmailAddress);
-        accountMockMvc.perform(MockMvcRequestBuilders.put(Constants.ACCOUNT_PATH + Constants.UPDATE_ACCOUNT_PATH)
-                        .content(TestUtils.asJsonString(accountUpdateRequest))
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+        String jsonRequest = TestUtils.asJsonString(accountUpdateRequest);
+        log.info("Serialized JSON Request: {}", jsonRequest);
 
+        when(accountService.updateAccount(any(AccountUpdateRequest.class)))
+                .thenReturn(new Account(existingSortCode, newName, existingAcNumber, newEmailAddress));
+
+        accountMockMvc.perform(MockMvcRequestBuilders.put(Constants.ACCOUNT_PATH + Constants.UPDATE_ACCOUNT_PATH)
+                        .content(jsonRequest)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNoContent())
+                .andReturn();
+
+        final Account updatedAccount = accountService.findAccountByIban(originalIban);
+        assertEquals(expectedNewEmailAddress, updatedAccount.getEmailAddress());
     }
+
 
     private static Stream<Arguments> createAccountsParameters() {
         return Stream.of(
@@ -167,6 +177,7 @@ public class AccountControllerTests {
 
     private static Stream<Arguments> updateAccountsParameters() {
         return Stream.of(
+                // Test that whitespaces are being trimmed from updated customer names
                 Arguments.of(TestConstants.IBAN_1, "123456", "12345678", "Joe Bloggs", "Joseph Bloggs ", "Joseph Bloggs", "jb@blahmail.com",
                         "jb@blahmail.com", "jb@blahmail.com")
         );
