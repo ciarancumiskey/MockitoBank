@@ -8,20 +8,14 @@ import com.ciarancumiskey.mockitobank.utils.Constants;
 import com.ciarancumiskey.mockitobank.utils.TestConstants;
 import com.ciarancumiskey.mockitobank.utils.TestUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -31,11 +25,9 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 //@SpringBootTest
@@ -64,7 +56,7 @@ public class AccountControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(TestUtils.asJsonString(accountCreationReq)))
                 .andExpect(status().isCreated()).andReturn();
-        //todo validate response
+        validateAccount(createAcMvcResult.getResponse().getContentAsString(), expectedIbanCode, accountNumber, sortCode, expectedAccountName, expectedEmailAddress);
     }
 
     @ParameterizedTest
@@ -118,7 +110,7 @@ public class AccountControllerTests {
         MvcResult accountGetMvcResult = accountMockMvc.perform(MockMvcRequestBuilders.get(Constants.ACCOUNT_PATH + Constants.LOAD_ACCOUNT_PATH.replace("{accountIban}", expectedIbanCode))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk()).andReturn();
-        //todo validate content
+        validateAccount(accountGetMvcResult.getResponse().getContentAsString(), expectedIbanCode, accountNumber, sortCode, expectedAccountName, expectedEmailAddress);
     }
 
     @ParameterizedTest
@@ -148,7 +140,6 @@ public class AccountControllerTests {
         final Account updatedAccount = accountService.findAccountByIban(originalIban);
         assertEquals(expectedNewEmailAddress, updatedAccount.getEmailAddress());
     }
-
 
     private static Stream<Arguments> createAccountsParameters() {
         return Stream.of(
@@ -183,15 +174,15 @@ public class AccountControllerTests {
         );
     }
 
-    private static void validateAccount(final ResponseEntity<Account> accountResponse,
+    private static void validateAccount(final String accountJsonString,
                                         final String expectedIbanCode, final String accountNumber,
                                         final String sortCode, final String accountName, final String emailAddress){
-        final Account createdAccount = accountResponse.getBody();
-        assertNotNull(createdAccount);
-        assertEquals(expectedIbanCode, createdAccount.getIbanCode());
-        assertEquals(accountNumber, createdAccount.getAccountNumber());
-        assertEquals(sortCode, createdAccount.getSortCode());
-        assertEquals(accountName, createdAccount.getAccountName());
-        assertEquals(emailAddress, createdAccount.getEmailAddress());
+        final Account parsedAccount = (Account) TestUtils.fromJsonString(accountJsonString, Account.class);
+        log.info("Validating account: {}", parsedAccount);
+        assertEquals(expectedIbanCode, parsedAccount.getIbanCode());
+        assertEquals(accountNumber, parsedAccount.getAccountNumber());
+        assertEquals(sortCode, parsedAccount.getSortCode());
+        assertEquals(accountName, parsedAccount.getAccountName());
+        assertEquals(emailAddress, parsedAccount.getEmailAddress());
     }
 }
