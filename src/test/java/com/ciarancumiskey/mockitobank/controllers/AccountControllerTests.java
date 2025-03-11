@@ -1,5 +1,7 @@
 package com.ciarancumiskey.mockitobank.controllers;
 
+import com.ciarancumiskey.mockitobank.exceptions.InvalidArgumentsException;
+import com.ciarancumiskey.mockitobank.exceptions.NotFoundException;
 import com.ciarancumiskey.mockitobank.models.Account;
 import com.ciarancumiskey.mockitobank.models.AccountCreationRequest;
 import com.ciarancumiskey.mockitobank.models.AccountUpdateRequest;
@@ -11,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -24,13 +27,12 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static com.ciarancumiskey.mockitobank.utils.Constants.ERROR_MSG_INVALID_IBAN;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-//@SpringBootTest
 @Slf4j
 @WebMvcTest(AccountController.class)
 public class AccountControllerTests {
@@ -130,15 +132,64 @@ public class AccountControllerTests {
         when(accountService.updateAccount(any(AccountUpdateRequest.class)))
                 .thenReturn(new Account(existingSortCode, newName, existingAcNumber, newEmailAddress));
 
+        final MvcResult accountUpdateResult = accountMockMvc.perform(MockMvcRequestBuilders.put(Constants.ACCOUNT_PATH + Constants.UPDATE_ACCOUNT_PATH)
+                        .content(jsonRequest)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                //todo validate response body
+                .andReturn();
+        log.info(accountUpdateResult.getResponse().getContentAsString());
+
+        final Account updatedAccount = accountService.findAccountByIban(originalIban);
+        assertEquals(expectedNewEmailAddress, updatedAccount.getEmailAddress());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "\t\t", "\n", "      ", "123", "123456767890", TestConstants.IBAN_FAIL_1,
+            TestConstants.IBAN_FAIL_2, TestConstants.IBAN_FAIL_3, TestConstants.IBAN_FAIL_4, TestConstants.IBAN_FAIL_5,
+            TestConstants.IBAN_FAIL_6, TestConstants.IBAN_FAIL_7})
+    void updateAccountsInvalidIbanTest(final String invalidIban)
+            throws Exception {
+        final String existingName = "Test Account";
+        final String existingEmail = "test.account@zinkworks.com";
+
+        when(accountService.updateAccount(any(AccountUpdateRequest.class))).thenThrow(new InvalidArgumentsException(ERROR_MSG_INVALID_IBAN));
+
+        final AccountUpdateRequest invalidUpdateRequest = new AccountUpdateRequest(invalidIban, existingName, existingEmail);
+        String jsonRequest = TestUtils.asJsonString(invalidUpdateRequest);
+        log.info("Serialized JSON Request: {}", jsonRequest);
+
         accountMockMvc.perform(MockMvcRequestBuilders.put(Constants.ACCOUNT_PATH + Constants.UPDATE_ACCOUNT_PATH)
                         .content(jsonRequest)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNoContent())
-                .andReturn();
+                .andExpect(status().isBadRequest());
+    }
 
-        final Account updatedAccount = accountService.findAccountByIban(originalIban);
-        assertEquals(expectedNewEmailAddress, updatedAccount.getEmailAddress());
+    @ParameterizedTest
+    @ValueSource(strings = {TestConstants.UPDATED_IBAN_1, TestConstants.IBAN_2, TestConstants.IBAN_3,
+            TestConstants.IBAN_4, TestConstants.IBAN_5, TestConstants.IBAN_6, TestConstants.IBAN_WO_EMAIL,
+            TestConstants.IBAN_INVALID_EMAIL, TestConstants.IBAN_WHITESPACE_1, TestConstants.IBAN_WHITESPACE_2,
+            TestConstants.IBAN_WHITESPACE_3})
+    void updateAccountsIncorrectIbanTest(final String incorrectIban)
+            throws Exception {
+        final String existingName = "Test Account";
+        final String existingEmail = "test.account@zinkworks.com";
+
+        final AccountUpdateRequest invalidUpdateRequest = new AccountUpdateRequest(incorrectIban, existingName, existingEmail);
+        // Use any() matcher if the exact object equality is not guaranteed
+        final String expectedErrorMessage = "No account found with IBAN " + incorrectIban;
+        when(accountService.updateAccount(any(AccountUpdateRequest.class))).thenThrow(new NotFoundException(expectedErrorMessage));
+
+        String jsonRequest = TestUtils.asJsonString(invalidUpdateRequest);
+        log.info("Serialized JSON Request: {}", jsonRequest);
+
+        accountMockMvc.perform(MockMvcRequestBuilders.put(Constants.ACCOUNT_PATH + Constants.UPDATE_ACCOUNT_PATH)
+                        .content(jsonRequest)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
     }
 
     private static Stream<Arguments> createAccountsParameters() {

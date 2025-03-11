@@ -1,12 +1,11 @@
 package com.ciarancumiskey.mockitobank.models;
 
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.lang.NonNull;
-
-import javax.validation.constraints.Size;
 
 @NoArgsConstructor
 @AllArgsConstructor

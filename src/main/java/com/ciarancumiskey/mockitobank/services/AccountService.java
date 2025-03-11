@@ -1,6 +1,9 @@
 package com.ciarancumiskey.mockitobank.services;
 
 import com.ciarancumiskey.mockitobank.database.AccountDbRepository;
+import com.ciarancumiskey.mockitobank.exceptions.AlreadyExistsException;
+import com.ciarancumiskey.mockitobank.exceptions.InvalidArgumentsException;
+import com.ciarancumiskey.mockitobank.exceptions.NotFoundException;
 import com.ciarancumiskey.mockitobank.models.Account;
 import com.ciarancumiskey.mockitobank.models.AccountUpdateRequest;
 import com.ciarancumiskey.mockitobank.utils.Constants;
@@ -18,30 +21,33 @@ public class AccountService {
 
     @Autowired private AccountDbRepository accountDbRepository;
 
-    public Account createAccount(final String sortCode, final String accountName, final String accountNumber, final String emailAddress){
+    public Account createAccount(final String sortCode, final String accountName, final String accountNumber, final String emailAddress) throws AlreadyExistsException, InvalidArgumentsException {
         log.info("Creating new account for {}", accountName);
         // Validate the account
-        if(!validateAccountDetails(sortCode, accountNumber, accountName)){
-            return null;
-        }
+        validateAccountDetails(sortCode, accountNumber, accountName);
         final Account newAccount = new Account(sortCode, accountName, accountNumber, emailAddress);
         // Verify that the new account doesn't clash with an existing one
         final String newAccountIban = newAccount.getIbanCode();
-        if(findAccountByIban(newAccountIban) == null){
+        final Optional<Account> existingAccountOpt = accountDbRepository.findById(newAccountIban);
+        if(existingAccountOpt.isEmpty()){
             accountDbRepository.save(newAccount);
             return newAccount;
         } else {
-            log.error("Account with IBAN {} already exists", newAccountIban);
-            return null;
+            final String accountAlreadyExistsErrorMsg = "Account with IBAN %s already exists".formatted(newAccountIban);
+            throw new AlreadyExistsException(accountAlreadyExistsErrorMsg);
         }
     }
 
-    public Account updateAccount(final AccountUpdateRequest accountUpdateRequest){
+    public Account updateAccount(final AccountUpdateRequest accountUpdateRequest)
+            throws InvalidArgumentsException, NotFoundException {
         final String existingIbanCode = accountUpdateRequest.getAccountIban();
+        if(existingIbanCode.length() != 22){
+            throw new InvalidArgumentsException(Constants.ERROR_MSG_INVALID_IBAN);
+        }
         final Optional<Account> accountToUpdate = accountDbRepository.findById(existingIbanCode);
         if(accountToUpdate.isEmpty()){
-            log.error("No account found with IBAN {}", existingIbanCode);
-            return null;
+            final String notFoundError = Constants.ERROR_MSG_IBAN_NOT_FOUND.formatted(existingIbanCode);
+            throw new NotFoundException(notFoundError);
         } else {
             log.info("Updating account for {}", existingIbanCode);
             final Account account = accountToUpdate.get();
@@ -67,9 +73,15 @@ public class AccountService {
         }
     }
 
-    public Account findAccountByIban(final String iban){
+    public Account findAccountByIban(final String iban) throws InvalidArgumentsException, NotFoundException  {
+        if(iban == null || iban.length() != 22){
+            throw new InvalidArgumentsException(ERROR_MSG_INVALID_IBAN);
+        }
         final Optional<Account> accountOpt = accountDbRepository.findById(iban);
-        return accountOpt.orElse(null);
+        if(accountOpt.isEmpty()){
+            throw new NotFoundException(ERROR_MSG_IBAN_NOT_FOUND.formatted(iban));
+        }
+        return accountOpt.get();
     }
 
     public String deleteAccount(final String ibanToDelete){
@@ -78,21 +90,22 @@ public class AccountService {
         return ibanToDelete;
     }
 
-    private boolean validateAccountDetails(final String sortCode, final String accountNumber, final String accountName){
+    private void validateAccountDetails(final String sortCode, final String accountNumber, final String accountName)
+        throws InvalidArgumentsException {
         // Validate the inputs
+        final String errorMessage;
         if(!Constants.SORT_CODE_REGEX.matcher(sortCode).find()){
-            log.error("Sort code {} is invalid, it must be 6 numbers and nothing else", sortCode);
-            return false;
+            errorMessage = Constants.ERROR_MSG_INVALID_SORT_CODE.formatted(sortCode);
+            throw new InvalidArgumentsException(errorMessage);
         }
         if(!Constants.ACCOUNT_NUMBER_REGEX.matcher(accountNumber).find()){
-            log.error("Account number {} is invalid, it must be 8 numbers and nothing else", accountNumber);
-            return false;
+            errorMessage = Constants.ERROR_MSG_INVALID_AC_NUMBER.formatted(accountNumber);
+            throw new InvalidArgumentsException(errorMessage);
         }
         if(accountName.isBlank()){
-            log.error("Please enter a name.");
-            return false;
+            errorMessage = Constants.ERROR_MSG_BLANK_AC_NAME;
+            throw new InvalidArgumentsException(errorMessage);
         }
-        return true;
     }
 
     private void validateAccountNewEmail(final Account newAccount, final String emailAddress){

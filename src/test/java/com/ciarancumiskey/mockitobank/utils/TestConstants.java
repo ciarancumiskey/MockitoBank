@@ -19,6 +19,9 @@ public class TestConstants {
     public static final String IBAN_FAIL_2 = "IE94MOCK123456712345678";
     public static final String IBAN_FAIL_3 = "IE94MOCK1234561234567";
     public static final String IBAN_FAIL_4 = "IE94MOCK123456123456789";
+    public static final String IBAN_FAIL_5 = "IE94MOC12345612345678";
+    public static final String IBAN_FAIL_6 = "IE94MCK12345612345678";
+    public static final String IBAN_FAIL_7 = "IE94M0CK12345612345678";
 
     public static final Arguments USER_1_ARGS = Arguments.of("123456", "Joe Bloggs", "Joe Bloggs", "12345678",
             "jb@blahmail.com", "jb@blahmail.com", IBAN_1);
