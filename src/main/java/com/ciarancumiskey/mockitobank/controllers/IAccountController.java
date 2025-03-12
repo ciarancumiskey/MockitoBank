@@ -125,5 +125,39 @@ public interface IAccountController {
             })
     @PutMapping(value = Constants.UPDATE_ACCOUNT_PATH, consumes = MediaType.APPLICATION_JSON_VALUE,
              produces = MediaType.APPLICATION_JSON_VALUE)
-    String updateAccount(@Valid @RequestBody final AccountUpdateRequest accountUpdateRequest) throws NotFoundException, InvalidArgumentsException;
+    String updateAccount(@Valid @RequestBody final AccountUpdateRequest accountUpdateRequest) throws NotFoundException,
+            InvalidArgumentsException;
+
+    @Operation(summary = "Delete account")
+    @ApiResponses(
+            value = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Account successfully deleted",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ResponseEntity.class))),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Bad request",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ProblemDetails.class))),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ProblemDetails.class))),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "Service error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ProblemDetails.class)))
+            })
+    @DeleteMapping(value = Constants.DELETE_PATH,
+             produces = MediaType.APPLICATION_JSON_VALUE)
+    String deleteAccount(@PathVariable("accountIban") final String accountIban) throws NotFoundException,
+            InvalidArgumentsException;
 }

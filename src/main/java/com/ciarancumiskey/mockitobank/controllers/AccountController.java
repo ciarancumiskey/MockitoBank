@@ -60,5 +60,10 @@ public class AccountController implements IAccountController {
             throw e;
         }
     }
+
+    @Override
+    public String deleteAccount(String accountIban) throws NotFoundException, InvalidArgumentsException {
+        return accountService.deleteAccount(accountIban);
+    }
     // TODO: Delete
 }

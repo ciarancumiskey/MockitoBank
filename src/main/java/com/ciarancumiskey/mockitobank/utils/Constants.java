@@ -16,6 +16,7 @@ public class Constants {
     public final static String REGISTRATION_PATH = "/register";
     public final static String LOAD_ACCOUNT_PATH = "/load/{accountIban}";
     public final static String UPDATE_ACCOUNT_PATH = "/update";
+    public static final String DELETE_PATH = "/delete/{accountIban}";
 
     // Regex
     public final static Pattern SORT_CODE_REGEX = Pattern.compile("[0-9]{6}");
@@ -29,4 +30,7 @@ public class Constants {
     public static final String ERROR_MSG_INVALID_AC_NUMBER = "Account number %s is invalid, it must be 8 numbers and nothing else.";
     public static final String ERROR_MSG_INVALID_IBAN = "Invalid IBAN provided. IBAN must be 22 characters long, starting with the bank's BIC.";
     public static final String ERROR_MSG_INVALID_SORT_CODE = "Sort code %s is invalid, it must be 6 numbers and nothing else.";
+
+    // Other response messages
+    public static final String MSG_DELETION_SUCCESSFUL = "Account with IBAN %s deleted successfully.";
 }

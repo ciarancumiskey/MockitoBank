@@ -84,10 +84,15 @@ public class AccountService {
         return accountOpt.get();
     }
 
-    public String deleteAccount(final String ibanToDelete){
+    public String deleteAccount(final String ibanToDelete) throws InvalidArgumentsException, NotFoundException {
+        if (ibanToDelete == null || ibanToDelete.length() != 22) {
+            throw new InvalidArgumentsException(ERROR_MSG_INVALID_IBAN);
+        } else if (accountDbRepository.findById(ibanToDelete).isEmpty()){
+            throw new NotFoundException(ERROR_MSG_IBAN_NOT_FOUND.formatted(ibanToDelete));
+        }
         log.warn("Deleting account of IBAN {}", ibanToDelete);
         accountDbRepository.deleteById(ibanToDelete);
-        return ibanToDelete;
+        return MSG_DELETION_SUCCESSFUL.formatted(ibanToDelete);
     }
 
     private void validateAccountDetails(final String sortCode, final String accountNumber, final String accountName)
