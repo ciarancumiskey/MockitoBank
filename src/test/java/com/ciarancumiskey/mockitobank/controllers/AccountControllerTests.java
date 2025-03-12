@@ -1,5 +1,6 @@
 package com.ciarancumiskey.mockitobank.controllers;
 
+import com.ciarancumiskey.mockitobank.exceptions.AlreadyExistsException;
 import com.ciarancumiskey.mockitobank.exceptions.InvalidArgumentsException;
 import com.ciarancumiskey.mockitobank.exceptions.NotFoundException;
 import com.ciarancumiskey.mockitobank.models.Account;
@@ -25,9 +26,12 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.util.HashMap;
 import java.util.stream.Stream;
 
-import static com.ciarancumiskey.mockitobank.utils.Constants.ERROR_MSG_INVALID_IBAN;
+import static com.ciarancumiskey.mockitobank.utils.Constants.*;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.*;
+import static com.fasterxml.jackson.databind.type.LogicalType.Map;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -57,47 +61,54 @@ public class AccountControllerTests {
         MvcResult createAcMvcResult = accountMockMvc.perform(MockMvcRequestBuilders.post(Constants.ACCOUNT_PATH + Constants.REGISTRATION_PATH)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(TestUtils.asJsonString(accountCreationReq)))
-                .andExpect(status().isCreated()).andReturn();
+                .andExpect(status().isOk()).andReturn();
         validateAccount(createAcMvcResult.getResponse().getContentAsString(), expectedIbanCode, accountNumber, sortCode, expectedAccountName, expectedEmailAddress);
     }
 
     @ParameterizedTest
     @MethodSource("createAccountsParameters")
-    void createDuplicateAccountsTest(final String sortCode, final String accountName, final String expectedAccountName,
-                            final String accountNumber, final String emailAddress, final String expectedEmailAddress,
+    void createDuplicateAccountsTest(final String sortCode, final String duplicateAccountName, final String expectedAccountName,
+                            final String accountNumber, final String duplicateEmailAddress, final String expectedEmailAddress,
                             final String expectedIbanCode) throws Exception {
         final MockHttpServletRequest request = new MockHttpServletRequest();
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
-        final Account existingAccount = new Account(sortCode, "Oran Ginal", accountNumber,
-                "oran.ginal@duplicates.com");
+        final String originalName = "O. G. Test";
+        final String originalEmail = "og@testmail.com";
+        final Account existingAccount = new Account(sortCode, originalName, accountNumber, originalEmail);
         existingAccount.setIbanCode(expectedIbanCode);
+        when(accountService.createAccount(sortCode, originalName, accountNumber, originalEmail)).thenReturn(existingAccount);
+        final String expectedErrorMessage = ERROR_MSG_DUPLICATE_IBAN.formatted(expectedIbanCode);
+        when(accountService.createAccount(sortCode, duplicateAccountName, accountNumber, duplicateEmailAddress)).thenThrow(new AlreadyExistsException(expectedErrorMessage));
 
         // Try sending another request to create an account with the same sort code and account number
-        final AccountCreationRequest accountCreationReq = new AccountCreationRequest(sortCode, accountName,
-                accountNumber, emailAddress);
-        accountMockMvc.perform(
-                MockMvcRequestBuilders.post(Constants.ACCOUNT_PATH + Constants.REGISTRATION_PATH)
-                        .content(TestUtils.asJsonString(accountCreationReq))
-                        .contentType(MediaType.APPLICATION_JSON))
-                        .andExpect(status().isBadRequest());
+        final AccountCreationRequest duplicateAccountCreationReq = new AccountCreationRequest(sortCode, duplicateAccountName,
+                accountNumber, duplicateEmailAddress);
+        MvcResult mvcResult = accountMockMvc.perform(
+                        MockMvcRequestBuilders.post(Constants.ACCOUNT_PATH + Constants.REGISTRATION_PATH)
+                                .content(TestUtils.asJsonString(duplicateAccountCreationReq))
+                                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isConflict()).andReturn();
+        final String errorResponseString = mvcResult.getResponse().getContentAsString();
+        assertTrue(errorResponseString.contains(expectedErrorMessage));
     }
 
     @ParameterizedTest
     @MethodSource("createInvalidAccountParameters")
     void createAccountsTestErrors(final String sortCode, final String accountName, final String accountNumber,
-                                  final String emailAddress, final String expectedIban) throws Exception {
+                                  final String emailAddress, final String expectedErrorMessage) throws Exception {
         final MockHttpServletRequest request = new MockHttpServletRequest();
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        when(accountService.createAccount(sortCode, accountName, accountNumber, emailAddress))
+                .thenThrow(new InvalidArgumentsException(expectedErrorMessage));
         final AccountCreationRequest accountCreationReq = new AccountCreationRequest(sortCode, accountName,
                 accountNumber, emailAddress);
 
-        accountMockMvc.perform(MockMvcRequestBuilders.post(Constants.ACCOUNT_PATH + Constants.REGISTRATION_PATH)
+        MvcResult mvcResult = accountMockMvc.perform(MockMvcRequestBuilders.post(Constants.ACCOUNT_PATH + Constants.REGISTRATION_PATH)
                         .content(TestUtils.asJsonString(accountCreationReq))
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
-        //Verify that the account hasn't been created
-        final Account accountFromDb = accountService.findAccountByIban(expectedIban);
-        assertNull(accountFromDb);
+                .andExpect(status().isBadRequest()).andReturn();
+        final String errorResponseString = mvcResult.getResponse().getContentAsString();
+        assertTrue(errorResponseString.contains(expectedErrorMessage), "Error message was actually " + errorResponseString);
     }
 
     @ParameterizedTest
@@ -130,19 +141,18 @@ public class AccountControllerTests {
         log.info("Serialized JSON Request: {}", jsonRequest);
 
         when(accountService.updateAccount(any(AccountUpdateRequest.class)))
-                .thenReturn(new Account(existingSortCode, newName, existingAcNumber, newEmailAddress));
+                .thenReturn(new Account(existingSortCode, newName, existingAcNumber, expectedNewEmailAddress));
 
         final MvcResult accountUpdateResult = accountMockMvc.perform(MockMvcRequestBuilders.put(Constants.ACCOUNT_PATH + Constants.UPDATE_ACCOUNT_PATH)
                         .content(jsonRequest)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                //todo validate response body
                 .andReturn();
-        log.info(accountUpdateResult.getResponse().getContentAsString());
-
-        final Account updatedAccount = accountService.findAccountByIban(originalIban);
-        assertEquals(expectedNewEmailAddress, updatedAccount.getEmailAddress());
+        assertNotNull(accountUpdateResult);
+        assertNotNull(accountUpdateResult.getResponse());
+        final String responseContent = accountUpdateResult.getResponse().getContentAsString();
+        validateAccount(responseContent, originalIban, existingAcNumber, existingSortCode, expectedNewName, expectedNewEmailAddress);
     }
 
     @ParameterizedTest
@@ -160,11 +170,15 @@ public class AccountControllerTests {
         String jsonRequest = TestUtils.asJsonString(invalidUpdateRequest);
         log.info("Serialized JSON Request: {}", jsonRequest);
 
-        accountMockMvc.perform(MockMvcRequestBuilders.put(Constants.ACCOUNT_PATH + Constants.UPDATE_ACCOUNT_PATH)
+        MvcResult mvcResult = accountMockMvc.perform(MockMvcRequestBuilders.put(Constants.ACCOUNT_PATH + Constants.UPDATE_ACCOUNT_PATH)
                         .content(jsonRequest)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest()).andReturn();
+        final String errorResponseString = mvcResult.getResponse().getContentAsString();
+        HashMap errorResponseContent = g.fromJson(errorResponseString, HashMap.class);
+        assertNotNull(errorResponseContent.get("message"));
+        log.info("Error content: {}", errorResponseContent.get("message"));
     }
 
     @ParameterizedTest
@@ -185,11 +199,14 @@ public class AccountControllerTests {
         String jsonRequest = TestUtils.asJsonString(invalidUpdateRequest);
         log.info("Serialized JSON Request: {}", jsonRequest);
 
-        accountMockMvc.perform(MockMvcRequestBuilders.put(Constants.ACCOUNT_PATH + Constants.UPDATE_ACCOUNT_PATH)
+        MvcResult mvcResult = accountMockMvc.perform(MockMvcRequestBuilders.put(Constants.ACCOUNT_PATH + Constants.UPDATE_ACCOUNT_PATH)
                         .content(jsonRequest)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound()).andReturn();
+        final String errorResponseString = mvcResult.getResponse().getContentAsString();
+        log.info("Error content: {}", errorResponseString);
+        assertTrue(errorResponseString.contains(expectedErrorMessage), "Error message was actually " + errorResponseString);
     }
 
     private static Stream<Arguments> createAccountsParameters() {
@@ -213,27 +230,35 @@ public class AccountControllerTests {
                 TestConstants.USER_INVALID_SORT_CODE_5_NUMS,
                 TestConstants.USER_INVALID_SORT_CODE_7_NUMS,
                 TestConstants.USER_INVALID_AC_NUMBER_7_NUMS,
-                TestConstants.USER_INVALID_AC_NUMBER_9_NUMS
+                TestConstants.USER_INVALID_AC_NUMBER_9_NUMS,
+                TestConstants.USER_INVALID_NO_NAME,
+                TestConstants.USER_INVALID_WHITESPACE_NAME,
+                TestConstants.USER_INVALID_TABS_NAME,
+                TestConstants.USER_INVALID_NEWLINE_NAME
         );
     }
 
     private static Stream<Arguments> updateAccountsParameters() {
         return Stream.of(
-                // Test that whitespaces are being trimmed from updated customer names
-                Arguments.of(TestConstants.IBAN_1, "123456", "12345678", "Joe Bloggs", "Joseph Bloggs ", "Joseph Bloggs", "jb@blahmail.com",
-                        "jb@blahmail.com", "jb@blahmail.com")
+                IBAN_1_JOSEPH,
+                IBAN_1_JBLOGGS_EMAIL,
+                // Test that whitespaces are being trimmed from updated email addresses and customer names
+                IBAN_1_EMAIL_WHITESPACE,
+                IBAN_1_EMAIL_TABS,
+                IBAN_1_EMAIL_NEWLINES,
+                IBAN_WHITESPACE_1_NEW_EMAIL
         );
     }
 
     private static void validateAccount(final String accountJsonString,
-                                        final String expectedIbanCode, final String accountNumber,
-                                        final String sortCode, final String accountName, final String emailAddress){
+                                        final String expectedIbanCode, final String expectedAcNumber,
+                                        final String expectedSortCode, final String expectedAcName, final String expectedEmailAddress){
         final Account parsedAccount = (Account) TestUtils.fromJsonString(accountJsonString, Account.class);
         log.info("Validating account: {}", parsedAccount);
         assertEquals(expectedIbanCode, parsedAccount.getIbanCode());
-        assertEquals(accountNumber, parsedAccount.getAccountNumber());
-        assertEquals(sortCode, parsedAccount.getSortCode());
-        assertEquals(accountName, parsedAccount.getAccountName());
-        assertEquals(emailAddress, parsedAccount.getEmailAddress());
+        assertEquals(expectedAcNumber, parsedAccount.getAccountNumber());
+        assertEquals(expectedSortCode, parsedAccount.getSortCode());
+        assertEquals(expectedAcName, parsedAccount.getAccountName());
+        assertEquals(expectedEmailAddress, parsedAccount.getEmailAddress());
     }
 }

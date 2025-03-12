@@ -47,9 +47,32 @@ public class TestConstants {
     public static final Arguments USER_TRAILING_WHITESPACE_3 = Arguments.of("656766", "Mark Corrigan", "Mark Corrigan",
             "42345679", "mark.corrigan@jlbcredit.co.uk", "mark.corrigan@jlbcredit.co.uk", IBAN_WHITESPACE_3);
 
+    // Updates
+    public static final Arguments IBAN_1_JOSEPH = Arguments.of(TestConstants.IBAN_1, "123456", "12345678",
+            "Joe Bloggs", "Joseph Bloggs", "Joseph Bloggs", "jb@blahmail.com", "jb@blahmail.com", "jb@blahmail.com");
+    public static final Arguments IBAN_1_JBLOGGS_EMAIL = Arguments.of(TestConstants.IBAN_1, "123456", "12345678",
+            "Joe Bloggs", "Joseph Bloggs", "Joseph Bloggs", "jb@blahmail.com", "j.bloggs@blahmail.com",
+            "j.bloggs@blahmail.com");
+    public static final Arguments IBAN_1_EMAIL_WHITESPACE = Arguments.of(TestConstants.IBAN_1, "123456", "12345678",
+            "Joe Bloggs", "Joseph Bloggs", "Joseph Bloggs", "jb@blahmail.com", "j.bloggs@ipsummail.com ",
+            "j.bloggs@ipsummail.com");
+    public static final Arguments IBAN_1_EMAIL_TABS = Arguments.of(TestConstants.IBAN_1, "123456", "12345678",
+            "Joe Bloggs", "Joseph Bloggs", "Joseph Bloggs", "jb@blahmail.com", "j.bloggs@neutronmail.com\t\t",
+            "j.bloggs@neutronmail.com");
+    public static final Arguments IBAN_1_EMAIL_NEWLINES = Arguments.of(TestConstants.IBAN_1, "123456", "12345678",
+            "Joe Bloggs", "Joseph Bloggs", "Joseph Bloggs", "jb@blahmail.com", "j.bloggs@electronmail.ch\n\n",
+            "j.bloggs@electronmail.ch");
+    public static final Arguments IBAN_WHITESPACE_1_NEW_EMAIL = Arguments.of(IBAN_WHITESPACE_1, "656767", "32345679",
+            "Alan Johnson", " Alan Johnson\t", "Alan Johnson", "aj@consult.io", "a.johnson@jlbcredit.co.uk\n\n",
+            "a.johnson@jlbcredit.co.uk");
+
     // Error cases
-    public static final Arguments USER_INVALID_SORT_CODE_5_NUMS = Arguments.of("12345", "Test 1", "12345678", "John Jackson", IBAN_FAIL_1);
-    public static final Arguments USER_INVALID_SORT_CODE_7_NUMS = Arguments.of("1234567", "Test 2", "12345678", "Jack Johnson", IBAN_FAIL_2);
-    public static final Arguments USER_INVALID_AC_NUMBER_7_NUMS = Arguments.of("123456", "Test 3", "1234567", "Maire Ni Ceallaigh", IBAN_FAIL_3);
-    public static final Arguments USER_INVALID_AC_NUMBER_9_NUMS = Arguments.of("123456", "Test 4", "123456789", "", IBAN_FAIL_4);
+    public static final Arguments USER_INVALID_SORT_CODE_5_NUMS = Arguments.of("12345", "Test 1", "12345678", "johnjackson@email.com", Constants.ERROR_MSG_INVALID_SORT_CODE.formatted("12345"));
+    public static final Arguments USER_INVALID_SORT_CODE_7_NUMS = Arguments.of("1234567", "Test 2", "12345678", "jackjohnson@email.com", Constants.ERROR_MSG_INVALID_SORT_CODE.formatted("1234567"));
+    public static final Arguments USER_INVALID_AC_NUMBER_7_NUMS = Arguments.of("123456", "Test 3", "1234567", "maire.ni.cheilleagh@email.ie", Constants.ERROR_MSG_INVALID_AC_NUMBER.formatted("1234567"));
+    public static final Arguments USER_INVALID_AC_NUMBER_9_NUMS = Arguments.of("123456", "Test 4", "123456789", "", Constants.ERROR_MSG_INVALID_AC_NUMBER.formatted("123456789"));
+    public static final Arguments USER_INVALID_NO_NAME = Arguments.of("123456", "", "12345678", "", Constants.ERROR_MSG_BLANK_AC_NAME);
+    public static final Arguments USER_INVALID_WHITESPACE_NAME = Arguments.of("123456", "     ", "12345678", "", Constants.ERROR_MSG_BLANK_AC_NAME);
+    public static final Arguments USER_INVALID_TABS_NAME = Arguments.of("123456", "\t\t\t", "12345678", "", Constants.ERROR_MSG_BLANK_AC_NAME);
+    public static final Arguments USER_INVALID_NEWLINE_NAME = Arguments.of("123456", "\n\n", "12345678", "", Constants.ERROR_MSG_BLANK_AC_NAME);
 }

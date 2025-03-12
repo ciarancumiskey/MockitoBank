@@ -1,16 +1,18 @@
 package com.ciarancumiskey.mockitobank.exceptions;
 
 import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
 public class ProblemDetails {
-    private @NotNull String message;
-    private @NotNull int code;
-    private @NotNull String status;
-    private @NotNull List<String> details = new ArrayList<>();
+    private @NotNull final String message;
+    private @NotNull final int code;
+    private @NotNull final String status;
+    private @NotNull final List<String> details;
     
     public ProblemDetails(final Exception ex, final HttpStatus httpStatus){
         this.message = ex.getLocalizedMessage();

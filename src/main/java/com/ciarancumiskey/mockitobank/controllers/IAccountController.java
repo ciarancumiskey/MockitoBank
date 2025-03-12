@@ -59,7 +59,7 @@ public interface IAccountController {
             })
     @PostMapping(value = Constants.REGISTRATION_PATH, consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<Account> createAccount(@Valid @RequestBody final AccountCreationRequest accountCreationRequest)
+    String createAccount(@Valid @RequestBody final AccountCreationRequest accountCreationRequest)
             throws AlreadyExistsException, InvalidArgumentsException;
 
     @Operation(summary = "Find account")
@@ -92,7 +92,7 @@ public interface IAccountController {
             })
     @GetMapping(value = Constants.LOAD_ACCOUNT_PATH,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<Account> getAccount(@PathVariable("accountIban") final String accountIban)
+    String getAccount(@PathVariable("accountIban") final String accountIban)
             throws InvalidArgumentsException, NotFoundException;
 
     @Operation(summary = "Update account")
@@ -125,5 +125,5 @@ public interface IAccountController {
             })
     @PutMapping(value = Constants.UPDATE_ACCOUNT_PATH, consumes = MediaType.APPLICATION_JSON_VALUE,
              produces = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<Account> updateAccount(@Valid @RequestBody final AccountUpdateRequest accountUpdateRequest) throws NotFoundException, InvalidArgumentsException;
+    String updateAccount(@Valid @RequestBody final AccountUpdateRequest accountUpdateRequest) throws NotFoundException, InvalidArgumentsException;
 }

@@ -1,8 +1,13 @@
 package com.ciarancumiskey.mockitobank.utils;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import java.util.regex.Pattern;
 
 public class Constants {
+    public final static Gson g = new GsonBuilder().create();
+
     public final static String MOCKITO_BANK_BIC = "MOCKIE94";
     public final static String MOCKITO_BANK_IBAN_PREFIX = "IE94MOCK";
 
@@ -19,6 +24,7 @@ public class Constants {
 
     // Error messages
     public static final String ERROR_MSG_BLANK_AC_NAME = "Name cannot be blank.";
+    public static final String ERROR_MSG_DUPLICATE_IBAN = "Account with IBAN %s already exists";
     public static final String ERROR_MSG_IBAN_NOT_FOUND = "No account found with IBAN %s";
     public static final String ERROR_MSG_INVALID_AC_NUMBER = "Account number %s is invalid, it must be 8 numbers and nothing else.";
     public static final String ERROR_MSG_INVALID_IBAN = "Invalid IBAN provided. IBAN must be 22 characters long, starting with the bank's BIC.";
