@@ -192,9 +192,7 @@ public class AccountControllerTests {
         final MvcResult mvcResult = TestUtils.sendPutRequest(accountMockMvc, ACCOUNT_PATH + UPDATE_ACCOUNT_PATH,
                 jsonRequest, status().isBadRequest());
         final String errorResponseString = mvcResult.getResponse().getContentAsString();
-        HashMap errorResponseContent = g.fromJson(errorResponseString, HashMap.class);
-        assertNotNull(errorResponseContent.get("message"));
-        log.info("Error content: {}", errorResponseContent.get("message"));
+        assertTrue(errorResponseString.contains(ERROR_MSG_INVALID_IBAN));
     }
 
     @ParameterizedTest
@@ -220,6 +218,62 @@ public class AccountControllerTests {
         final String errorResponseString = mvcResult.getResponse().getContentAsString();
         log.info("Error content: {}", errorResponseString);
         assertTrue(errorResponseString.contains(expectedErrorMessage), "Error message was actually " + errorResponseString);
+    }
+
+    @ParameterizedTest
+    @MethodSource("deleteAccountsParameters")
+    void deleteAccountsTest(final String originalIban, final String existingSortCode, final String existingAcNumber,
+                            final String existingName, final String existingEmailAddress) throws Exception {
+        final Account expectedOriginalAccount = new Account(existingSortCode, existingName, existingAcNumber, existingEmailAddress);
+        expectedOriginalAccount.setIbanCode(originalIban);
+        when(accountService.findAccountByIban(originalIban)).thenReturn(expectedOriginalAccount);
+
+        final String expectedDeletionMessage = MSG_DELETION_SUCCESSFUL.formatted(originalIban);
+        when(accountService.deleteAccount(originalIban)).thenReturn(expectedDeletionMessage);
+
+        final String deleteEndpoint = ACCOUNT_PATH + DELETE_PATH.replace("{accountIban}", originalIban);
+        final MvcResult accountUpdateResult = TestUtils.sendDeleteRequest(accountMockMvc, deleteEndpoint,
+                status().isOk());
+        assertNotNull(accountUpdateResult);
+        assertNotNull(accountUpdateResult.getResponse());
+        final String responseContent = accountUpdateResult.getResponse().getContentAsString();
+        assertTrue(responseContent.contains(expectedDeletionMessage), "Response message was actually " + responseContent);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {IBAN_1, IBAN_2, IBAN_3, IBAN_4, IBAN_5, IBAN_6, IBAN_WO_EMAIL, IBAN_INVALID_EMAIL,
+            IBAN_WHITESPACE_1, IBAN_WHITESPACE_2, IBAN_WHITESPACE_3})
+    void deleteNonExistentAccountsTest(final String nonexistentIban) throws Exception {
+        final Account expectedOriginalAccount = new Account("234567", "Just Sumguy", "12345678",
+                "just.sumguy@someemail.com");
+        expectedOriginalAccount.setIbanCode(UPDATED_IBAN_1);
+        when(accountService.findAccountByIban(UPDATED_IBAN_1)).thenReturn(expectedOriginalAccount);
+
+        final String expectedDeletionMessage = ERROR_MSG_IBAN_NOT_FOUND.formatted(nonexistentIban);
+        when(accountService.deleteAccount(nonexistentIban)).thenThrow(new NotFoundException(ERROR_MSG_IBAN_NOT_FOUND.formatted(nonexistentIban)));
+
+        final String deleteEndpoint = ACCOUNT_PATH + DELETE_PATH.replace("{accountIban}", nonexistentIban);
+        final MvcResult accountUpdateResult = TestUtils.sendDeleteRequest(accountMockMvc, deleteEndpoint,
+                status().isNotFound());
+        assertNotNull(accountUpdateResult);
+        assertNotNull(accountUpdateResult.getResponse());
+        final String responseContent = accountUpdateResult.getResponse().getContentAsString();
+        assertTrue(responseContent.contains(expectedDeletionMessage), "Response message was actually " + responseContent);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {" ", "null", "\t\t", "\n", "      ", "123", "123456767890", TestConstants.IBAN_FAIL_1,
+            TestConstants.IBAN_FAIL_2, TestConstants.IBAN_FAIL_3, TestConstants.IBAN_FAIL_4, TestConstants.IBAN_FAIL_5,
+            TestConstants.IBAN_FAIL_6, TestConstants.IBAN_FAIL_7})
+    void deleteAccountsInvalidIbanTest(final String invalidIban)
+            throws Exception {
+        when(accountService.deleteAccount(invalidIban))
+                .thenThrow(new InvalidArgumentsException(ERROR_MSG_INVALID_IBAN));
+        final String deleteEndpoint = ACCOUNT_PATH + DELETE_PATH.replace("{accountIban}", invalidIban);
+        final MvcResult mvcResult = TestUtils.sendDeleteRequest(accountMockMvc, deleteEndpoint,
+                status().isBadRequest());
+        final String errorResponseString = mvcResult.getResponse().getContentAsString();
+        assertTrue(errorResponseString.contains(ERROR_MSG_INVALID_IBAN));
     }
 
     private static Stream<Arguments> createAccountsParameters() {
@@ -260,6 +314,16 @@ public class AccountControllerTests {
                 IBAN_1_EMAIL_TABS,
                 IBAN_1_EMAIL_NEWLINES,
                 IBAN_WHITESPACE_1_NEW_EMAIL
+        );
+    }
+
+    private static Stream<Arguments> deleteAccountsParameters() {
+        return Stream.of(
+                DELETE_USER_1_ARGS,
+                DELETE_USER_2_ARGS,
+                DELETE_USER_3_ARGS,
+                DELETE_USER_4_ARGS,
+                DELETE_USER_5_ARGS
         );
     }
 

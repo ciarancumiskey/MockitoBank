@@ -66,6 +66,18 @@ public class TestConstants {
             "Alan Johnson", " Alan Johnson\t", "Alan Johnson", "aj@consult.io", "a.johnson@jlbcredit.co.uk\n\n",
             "a.johnson@jlbcredit.co.uk");
 
+    // Deletions
+    public static final Arguments DELETE_USER_1_ARGS = Arguments.of(IBAN_1, "123456", "12345678", "Joe Bloggs",
+            "jb@blahmail.com");
+    public static final Arguments DELETE_USER_2_ARGS = Arguments.of(IBAN_2, "654321", "87650987", "Jacqui Bloggs",
+            "jacqui.b@lorumipsum.com");
+    public static final Arguments DELETE_USER_3_ARGS = Arguments.of(IBAN_3, "065432", "08765098", "James Bloggs",
+            "jamieb99@email.com");
+    public static final Arguments DELETE_USER_4_ARGS = Arguments.of(IBAN_4, "012345", "12345678", "Jane Bloggs",
+            "janebloggs@lorummail.com");
+    public static final Arguments DELETE_USER_5_ARGS = Arguments.of(IBAN_5, "012345", "12345670", "Anne-Marie Bloggs",
+             "am.bloggs@ipsummail.fr");
+
     // Error cases
     public static final Arguments USER_INVALID_SORT_CODE_5_NUMS = Arguments.of("12345", "Test 1", "12345678", "johnjackson@email.com", Constants.ERROR_MSG_INVALID_SORT_CODE.formatted("12345"));
     public static final Arguments USER_INVALID_SORT_CODE_7_NUMS = Arguments.of("1234567", "Test 2", "12345678", "jackjohnson@email.com", Constants.ERROR_MSG_INVALID_SORT_CODE.formatted("1234567"));

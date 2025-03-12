@@ -19,6 +19,14 @@ public class TestUtils {
         return gson.fromJson(accountJsonString, targetClass);
     }
 
+    public static MvcResult sendDeleteRequest(final MockMvc mvc, final String endpoint,
+                                           final ResultMatcher expectedStatusCode) throws Exception {
+        return mvc.perform(MockMvcRequestBuilders.delete(endpoint)
+                        .contentType(MediaType.APPLICATION_JSON))
+                        .andExpect(expectedStatusCode)
+                        .andReturn();
+    }
+
     public static MvcResult sendGetRequest(final MockMvc mvc, final String endpoint,
                                            final ResultMatcher expectedStatusCode) throws Exception {
         return mvc.perform(MockMvcRequestBuilders.get(endpoint)
