@@ -20,18 +20,19 @@ import static com.ciarancumiskey.mockitobank.utils.Constants.*;
 public class AccountService {
 
     private final AccountDbRepository accountDbRepository;
-    //private final String ibanPrefix;
+    private final String bankIdentifierCode;
 
     @Autowired
-    public AccountService(final AccountDbRepository accountDbRepository) {
+    public AccountService(final AccountDbRepository accountDbRepository, final String bankIdentifierCode) {
         this.accountDbRepository = accountDbRepository;
+        this.bankIdentifierCode = bankIdentifierCode;
     }
 
     public Account createAccount(final String sortCode, final String accountName, final String accountNumber, final String emailAddress) throws AlreadyExistsException, InvalidArgumentsException {
         log.info("Creating new account for {}", accountName);
         // Validate the account
         validateAccountDetails(sortCode, accountNumber, accountName);
-        final Account newAccount = new Account(sortCode, accountName, accountNumber, emailAddress);
+        final Account newAccount = new Account(bankIdentifierCode, sortCode, accountName, accountNumber, emailAddress);
         // Verify that the new account doesn't clash with an existing one
         final String newAccountIban = newAccount.getIbanCode();
         final Optional<Account> existingAccountOpt = accountDbRepository.findById(newAccountIban);

@@ -15,3 +15,5 @@ spring:
     properties:
       hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
     show-sql: true
+account-service:
+  bankIdentifierCode: IE94MOCK

@@ -2,7 +2,6 @@ package com.ciarancumiskey.mockitobank.models;
 
 import com.ciarancumiskey.mockitobank.utils.Constants;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,13 +29,13 @@ public class Account {
     //todo: transaction history
     //todo: password
 
-    public Account(@NonNull final String sortCode, @NonNull final String accountName,
+    public Account(@NonNull final String bankIdentifierCode, @NonNull final String sortCode, @NonNull final String accountName,
                    @NonNull final String accountNumber, final String emailAddress) {
         // Remove trailing whitespaces
         this.accountName = accountName.strip();
         this.accountNumber = accountNumber;
         this.sortCode = sortCode;
-        this.ibanCode = "%s%s%s".formatted(MOCKITO_BANK_IBAN_PREFIX, sortCode, accountNumber);
+        this.ibanCode = bankIdentifierCode + sortCode + accountNumber;
         this.balance = BigDecimal.ZERO;
         this.overdraftLimit = BigDecimal.ZERO;
         if(Constants.EMAIL_REGEX.matcher(emailAddress).find()){

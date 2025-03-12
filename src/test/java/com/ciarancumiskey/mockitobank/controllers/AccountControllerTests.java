@@ -1,5 +1,6 @@
 package com.ciarancumiskey.mockitobank.controllers;
 
+import com.ciarancumiskey.mockitobank.configuration.AccountServiceProperties;
 import com.ciarancumiskey.mockitobank.database.AccountDbRepository;
 import com.ciarancumiskey.mockitobank.exceptions.AlreadyExistsException;
 import com.ciarancumiskey.mockitobank.exceptions.InvalidArgumentsException;
@@ -12,22 +13,22 @@ import com.ciarancumiskey.mockitobank.utils.Constants;
 import com.ciarancumiskey.mockitobank.utils.TestConstants;
 import com.ciarancumiskey.mockitobank.utils.TestUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.util.HashMap;
 import java.util.stream.Stream;
 
 import static com.ciarancumiskey.mockitobank.utils.Constants.*;
@@ -41,9 +42,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(AccountController.class)
 public class AccountControllerTests {
 
-    @Autowired private MockMvc accountMockMvc;
-    @MockitoBean AccountService accountService;
-    @MockitoBean AccountDbRepository accountDbRepository;
+    @Autowired
+    private MockMvc accountMockMvc;
+
+    @MockitoBean
+    private AccountService accountService;
+
+    @Mock
+    private AccountServiceProperties accountServiceProperties;
+
+    @InjectMocks
+    private AccountService accountServiceWithMocks;
+
+    @BeforeEach
+    void setUp() {
+        // Set up the IBAN prefix for the test
+        when(accountServiceProperties.getBankIdentifierCode()).thenReturn(TEST_BIC);
+    }
+
 
     @ParameterizedTest
     @MethodSource("createAccountsParameters")
@@ -52,7 +68,7 @@ public class AccountControllerTests {
                             final String expectedIbanCode) throws Exception {
         final MockHttpServletRequest request = new MockHttpServletRequest();
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
-        final Account expectedAccount = new Account(sortCode, accountName, accountNumber, expectedEmailAddress);
+        final Account expectedAccount = new Account(accountServiceProperties.getBankIdentifierCode(), sortCode, accountName, accountNumber, expectedEmailAddress);
         final AccountCreationRequest accountCreationReq = new AccountCreationRequest(sortCode, accountName,
                 accountNumber, emailAddress);
         expectedAccount.setIbanCode(expectedIbanCode);
@@ -75,7 +91,7 @@ public class AccountControllerTests {
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
         final String originalName = "O. G. Test";
         final String originalEmail = "og@testmail.com";
-        final Account existingAccount = new Account(sortCode, originalName, accountNumber, originalEmail);
+        final Account existingAccount = new Account(accountServiceProperties.getBankIdentifierCode(), sortCode, originalName, accountNumber, originalEmail);
         existingAccount.setIbanCode(expectedIbanCode);
         when(accountService.createAccount(sortCode, originalName, accountNumber, originalEmail)).thenReturn(existingAccount);
         final String expectedErrorMessage = ERROR_MSG_DUPLICATE_IBAN.formatted(expectedIbanCode);
@@ -120,7 +136,8 @@ public class AccountControllerTests {
     void getAccountsTest(final String sortCode, final String accountName, final String expectedAccountName,
                          final String accountNumber, final String emailAddress, final String expectedEmailAddress,
                          final String expectedIbanCode) throws Exception {
-        final Account expectedAccount = new Account(sortCode, accountName, accountNumber, emailAddress);
+        final Account expectedAccount = new Account(accountServiceProperties.getBankIdentifierCode(), sortCode,
+                accountName, accountNumber, emailAddress);
         expectedAccount.setIbanCode(expectedIbanCode);
         when(accountService.findAccountByIban(expectedIbanCode)).thenReturn(expectedAccount);
 
@@ -171,7 +188,10 @@ public class AccountControllerTests {
                             final String existingName, final String newName, final String expectedNewName,
                             final String existingEmailAddress, final String newEmailAddress,
                             final String expectedNewEmailAddress) throws Exception {
-        final Account expectedOriginalAccount = new Account(existingSortCode, existingName, existingAcNumber, existingEmailAddress);
+        when(accountServiceProperties.getBankIdentifierCode()).thenReturn(TEST_BIC);
+
+        final Account expectedOriginalAccount = new Account(accountServiceProperties.getBankIdentifierCode(),
+                existingSortCode, existingName, existingAcNumber, existingEmailAddress);
         expectedOriginalAccount.setIbanCode(originalIban);
         when(accountService.findAccountByIban(originalIban)).thenReturn(expectedOriginalAccount);
 
@@ -180,7 +200,8 @@ public class AccountControllerTests {
         log.info("Serialized JSON Request: {}", jsonRequest);
 
         when(accountService.updateAccount(any(AccountUpdateRequest.class)))
-                .thenReturn(new Account(existingSortCode, newName, existingAcNumber, expectedNewEmailAddress));
+                .thenReturn(new Account(TestConstants.TEST_BIC, existingSortCode, newName,
+                        existingAcNumber, expectedNewEmailAddress));
 
         final MvcResult accountUpdateResult = TestUtils.sendPutRequest(accountMockMvc, ACCOUNT_PATH + UPDATE_ACCOUNT_PATH,
                 jsonRequest, status().isOk());
@@ -246,7 +267,8 @@ public class AccountControllerTests {
     @MethodSource("deleteAccountsParameters")
     void deleteAccountsTest(final String originalIban, final String existingSortCode, final String existingAcNumber,
                             final String existingName, final String existingEmailAddress) throws Exception {
-        final Account expectedOriginalAccount = new Account(existingSortCode, existingName, existingAcNumber, existingEmailAddress);
+        final Account expectedOriginalAccount = new Account(accountServiceProperties.getBankIdentifierCode(),
+                existingSortCode, existingName, existingAcNumber, existingEmailAddress);
         expectedOriginalAccount.setIbanCode(originalIban);
         when(accountService.findAccountByIban(originalIban)).thenReturn(expectedOriginalAccount);
 
@@ -268,8 +290,8 @@ public class AccountControllerTests {
     @ValueSource(strings = {IBAN_1, IBAN_2, IBAN_3, IBAN_4, IBAN_5, IBAN_6, IBAN_WO_EMAIL, IBAN_INVALID_EMAIL,
             IBAN_WHITESPACE_1, IBAN_WHITESPACE_2, IBAN_WHITESPACE_3})
     void deleteNonExistentAccountsTest(final String nonexistentIban) throws Exception {
-        final Account expectedOriginalAccount = new Account("234567", "Just Sumguy", "12345678",
-                "just.sumguy@someemail.com");
+        final Account expectedOriginalAccount = new Account(accountServiceProperties.getBankIdentifierCode(), "234567", "Just Sumguy",
+                "12345678", "just.sumguy@someemail.com");
         expectedOriginalAccount.setIbanCode(UPDATED_IBAN_1);
         when(accountService.findAccountByIban(UPDATED_IBAN_1)).thenReturn(expectedOriginalAccount);
 

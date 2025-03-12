@@ -3,6 +3,7 @@ package com.ciarancumiskey.mockitobank.utils;
 import org.junit.jupiter.params.provider.Arguments;
 
 public class TestConstants {
+    public static final String TEST_BIC = "IE94MOCK";
     public static final String IBAN_1 = "IE94MOCK12345612345678";
     public static final String UPDATED_IBAN_1 = "IE94MOCK23456712345678";
     public static final String IBAN_2 = "IE94MOCK65432187650987";

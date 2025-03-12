@@ -9,7 +9,8 @@ import org.springframework.context.annotation.Configuration;
 public class MockitoBankConfiguration {
 
     @Bean
-    public AccountService accountService(AccountDbRepository accountDbRepository){
-        return new AccountService(accountDbRepository);
+    public AccountService accountService(final AccountDbRepository accountDbRepository,
+                                         final AccountServiceProperties accountServiceProperties){
+        return new AccountService(accountDbRepository, accountServiceProperties.getBankIdentifierCode());
     }
 }

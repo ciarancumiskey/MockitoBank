@@ -1,20 +1,11 @@
 package com.ciarancumiskey.mockitobank.models;
 
-import com.ciarancumiskey.mockitobank.database.AccountDbRepository;
-import com.ciarancumiskey.mockitobank.services.AccountService;
 import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,7 +17,7 @@ public class AccountTest {
     @MethodSource("createAccountsParameters")
     void createAccounts(final String sortCode, final String accountName, final String accountNumber, final String emailAddress, final String expectedIbanCode) {
         log.info("Creating account for {}", accountName);
-        Account newAccount = new Account(sortCode, accountName, accountNumber, emailAddress);
+        Account newAccount = new Account("IE94MOCK", sortCode, accountName, accountNumber, emailAddress);
         assertEquals(accountName, newAccount.getAccountName());
         assertEquals(accountNumber, newAccount.getAccountNumber());
         assertEquals(sortCode, newAccount.getSortCode());
