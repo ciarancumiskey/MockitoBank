@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: MockitoBank
+  datasource:
+    url: jdbc:mysql://localhost:3306/mockito_bank
+    username: root
+    #todo: replace this using .env instead of the same password you used to run the MySQL container
+    password: secret
+  jpa:
+    defer-datasource-initialization: true
+    hibernate:
+      ddl-auto: update
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    properties:
+      hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
+    show-sql: true
+account-service:
+  bankIdentifierCode: IE94MOCK
