@@ -31,7 +31,6 @@ import java.util.stream.Stream;
 
 import static com.ciarancumiskey.mockitobank.utils.Constants.*;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.*;
-import static com.fasterxml.jackson.databind.type.LogicalType.Map;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -58,10 +57,8 @@ public class AccountControllerTests {
         when(accountService.createAccount(any(String.class),any(String.class),any(String.class),any(String.class)))
                 .thenReturn(expectedAccount);
 
-        MvcResult createAcMvcResult = accountMockMvc.perform(MockMvcRequestBuilders.post(Constants.ACCOUNT_PATH + Constants.REGISTRATION_PATH)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(TestUtils.asJsonString(accountCreationReq)))
-                .andExpect(status().isOk()).andReturn();
+        MvcResult createAcMvcResult = TestUtils.sendPostRequest(accountMockMvc, ACCOUNT_PATH + REGISTRATION_PATH,
+                TestUtils.asJsonString(accountCreationReq), status().isOk());
         validateAccount(createAcMvcResult.getResponse().getContentAsString(), expectedIbanCode, accountNumber, sortCode, expectedAccountName, expectedEmailAddress);
     }
 
@@ -83,11 +80,9 @@ public class AccountControllerTests {
         // Try sending another request to create an account with the same sort code and account number
         final AccountCreationRequest duplicateAccountCreationReq = new AccountCreationRequest(sortCode, duplicateAccountName,
                 accountNumber, duplicateEmailAddress);
-        MvcResult mvcResult = accountMockMvc.perform(
-                        MockMvcRequestBuilders.post(Constants.ACCOUNT_PATH + Constants.REGISTRATION_PATH)
-                                .content(TestUtils.asJsonString(duplicateAccountCreationReq))
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isConflict()).andReturn();
+        MvcResult mvcResult = TestUtils.sendPostRequest(accountMockMvc,
+                        Constants.ACCOUNT_PATH + Constants.REGISTRATION_PATH,
+                                TestUtils.asJsonString(duplicateAccountCreationReq), status().isConflict());
         final String errorResponseString = mvcResult.getResponse().getContentAsString();
         assertTrue(errorResponseString.contains(expectedErrorMessage));
     }
@@ -103,10 +98,9 @@ public class AccountControllerTests {
         final AccountCreationRequest accountCreationReq = new AccountCreationRequest(sortCode, accountName,
                 accountNumber, emailAddress);
 
-        MvcResult mvcResult = accountMockMvc.perform(MockMvcRequestBuilders.post(Constants.ACCOUNT_PATH + Constants.REGISTRATION_PATH)
-                        .content(TestUtils.asJsonString(accountCreationReq))
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest()).andReturn();
+        MvcResult mvcResult = TestUtils.sendPostRequest(accountMockMvc,
+                Constants.ACCOUNT_PATH + Constants.REGISTRATION_PATH,
+                TestUtils.asJsonString(accountCreationReq), status().isBadRequest());
         final String errorResponseString = mvcResult.getResponse().getContentAsString();
         assertTrue(errorResponseString.contains(expectedErrorMessage), "Error message was actually " + errorResponseString);
     }
@@ -120,10 +114,39 @@ public class AccountControllerTests {
         expectedAccount.setIbanCode(expectedIbanCode);
         when(accountService.findAccountByIban(expectedIbanCode)).thenReturn(expectedAccount);
 
-        MvcResult accountGetMvcResult = accountMockMvc.perform(MockMvcRequestBuilders.get(Constants.ACCOUNT_PATH + Constants.LOAD_ACCOUNT_PATH.replace("{accountIban}", expectedIbanCode))
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk()).andReturn();
-        validateAccount(accountGetMvcResult.getResponse().getContentAsString(), expectedIbanCode, accountNumber, sortCode, expectedAccountName, expectedEmailAddress);
+        final String getAccountPath = Constants.ACCOUNT_PATH + Constants.LOAD_ACCOUNT_PATH.replace("{accountIban}", expectedIbanCode);
+        final MvcResult accountGetMvcResult = TestUtils.sendGetRequest(accountMockMvc, getAccountPath, status().isOk());
+        validateAccount(accountGetMvcResult.getResponse().getContentAsString(), expectedIbanCode, accountNumber,
+                sortCode, expectedAccountName, expectedEmailAddress);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"IE93MOCK12345612345678", "IE93MOCK22345612345678", "IE94M0CK22345612345678",
+            "IE94ZINK22345612345678", "IE12DNPQ12345612345678"})
+    void getNonExistantAccountTest(final String expectedIbanCode) throws Exception {
+        final String expectedNotFoundErrorMessage = ERROR_MSG_IBAN_NOT_FOUND.formatted(expectedIbanCode);
+        when(accountService.findAccountByIban(expectedIbanCode)).thenThrow(new NotFoundException(expectedNotFoundErrorMessage));
+
+        final String getAccountPath = Constants.ACCOUNT_PATH + Constants.LOAD_ACCOUNT_PATH.replace("{accountIban}", expectedIbanCode);
+        final MvcResult accountGetMvcResult = TestUtils.sendGetRequest(accountMockMvc, getAccountPath, status().isNotFound());
+        final String errorResponseString = accountGetMvcResult.getResponse().getContentAsString();
+        log.info("Error content: {}", errorResponseString);
+        assertTrue(errorResponseString.contains(expectedNotFoundErrorMessage), "Error message was actually " + errorResponseString);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"IE93MOCK1234561234567", "IE93MOCK123456123456789", "IE93MOCK1234512345678",
+            "IE93MOCK123456712345678", "IE93M0K22345612345678", "IE94M0CK2234561235678", "E94ZINK223456123456787",
+            "E12DNPQ12345612345678"})
+    void getAccountWithInvalidIbanTest(final String invalidIban) throws Exception {
+        final String expectedNotFoundErrorMessage = ERROR_MSG_INVALID_IBAN;
+        when(accountService.findAccountByIban(invalidIban)).thenThrow(new InvalidArgumentsException(expectedNotFoundErrorMessage));
+
+        final String getAccountPath = Constants.ACCOUNT_PATH + Constants.LOAD_ACCOUNT_PATH.replace("{accountIban}", invalidIban);
+        final MvcResult accountGetMvcResult = TestUtils.sendGetRequest(accountMockMvc, getAccountPath, status().isBadRequest());
+        final String errorResponseString = accountGetMvcResult.getResponse().getContentAsString();
+        log.info("Error content: {}", errorResponseString);
+        assertTrue(errorResponseString.contains(expectedNotFoundErrorMessage), "Error message was actually " + errorResponseString);
     }
 
     @ParameterizedTest
@@ -143,12 +166,8 @@ public class AccountControllerTests {
         when(accountService.updateAccount(any(AccountUpdateRequest.class)))
                 .thenReturn(new Account(existingSortCode, newName, existingAcNumber, expectedNewEmailAddress));
 
-        final MvcResult accountUpdateResult = accountMockMvc.perform(MockMvcRequestBuilders.put(Constants.ACCOUNT_PATH + Constants.UPDATE_ACCOUNT_PATH)
-                        .content(jsonRequest)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andReturn();
+        final MvcResult accountUpdateResult = TestUtils.sendPutRequest(accountMockMvc, ACCOUNT_PATH + UPDATE_ACCOUNT_PATH,
+                jsonRequest, status().isOk());
         assertNotNull(accountUpdateResult);
         assertNotNull(accountUpdateResult.getResponse());
         final String responseContent = accountUpdateResult.getResponse().getContentAsString();
@@ -170,11 +189,8 @@ public class AccountControllerTests {
         String jsonRequest = TestUtils.asJsonString(invalidUpdateRequest);
         log.info("Serialized JSON Request: {}", jsonRequest);
 
-        MvcResult mvcResult = accountMockMvc.perform(MockMvcRequestBuilders.put(Constants.ACCOUNT_PATH + Constants.UPDATE_ACCOUNT_PATH)
-                        .content(jsonRequest)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest()).andReturn();
+        final MvcResult mvcResult = TestUtils.sendPutRequest(accountMockMvc, ACCOUNT_PATH + UPDATE_ACCOUNT_PATH,
+                jsonRequest, status().isBadRequest());
         final String errorResponseString = mvcResult.getResponse().getContentAsString();
         HashMap errorResponseContent = g.fromJson(errorResponseString, HashMap.class);
         assertNotNull(errorResponseContent.get("message"));
@@ -199,11 +215,8 @@ public class AccountControllerTests {
         String jsonRequest = TestUtils.asJsonString(invalidUpdateRequest);
         log.info("Serialized JSON Request: {}", jsonRequest);
 
-        MvcResult mvcResult = accountMockMvc.perform(MockMvcRequestBuilders.put(Constants.ACCOUNT_PATH + Constants.UPDATE_ACCOUNT_PATH)
-                        .content(jsonRequest)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound()).andReturn();
+        final MvcResult mvcResult = TestUtils.sendPutRequest(accountMockMvc, ACCOUNT_PATH + UPDATE_ACCOUNT_PATH,
+                jsonRequest, status().isNotFound());
         final String errorResponseString = mvcResult.getResponse().getContentAsString();
         log.info("Error content: {}", errorResponseString);
         assertTrue(errorResponseString.contains(expectedErrorMessage), "Error message was actually " + errorResponseString);
