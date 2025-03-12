@@ -1,5 +1,6 @@
 package com.ciarancumiskey.mockitobank.controllers;
 
+import com.ciarancumiskey.mockitobank.database.AccountDbRepository;
 import com.ciarancumiskey.mockitobank.exceptions.AlreadyExistsException;
 import com.ciarancumiskey.mockitobank.exceptions.InvalidArgumentsException;
 import com.ciarancumiskey.mockitobank.exceptions.NotFoundException;
@@ -33,7 +34,7 @@ import static com.ciarancumiskey.mockitobank.utils.Constants.*;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @Slf4j
@@ -42,6 +43,7 @@ public class AccountControllerTests {
 
     @Autowired private MockMvc accountMockMvc;
     @MockitoBean AccountService accountService;
+    @MockitoBean AccountDbRepository accountDbRepository;
 
     @ParameterizedTest
     @MethodSource("createAccountsParameters")
@@ -60,6 +62,8 @@ public class AccountControllerTests {
         MvcResult createAcMvcResult = TestUtils.sendPostRequest(accountMockMvc, ACCOUNT_PATH + REGISTRATION_PATH,
                 TestUtils.asJsonString(accountCreationReq), status().isOk());
         validateAccount(createAcMvcResult.getResponse().getContentAsString(), expectedIbanCode, accountNumber, sortCode, expectedAccountName, expectedEmailAddress);
+        // Verify the amount of times createAccount() was called
+        verify(accountService, times(1)).createAccount(sortCode, accountName, accountNumber, emailAddress);
     }
 
     @ParameterizedTest
@@ -85,6 +89,9 @@ public class AccountControllerTests {
                                 TestUtils.asJsonString(duplicateAccountCreationReq), status().isConflict());
         final String errorResponseString = mvcResult.getResponse().getContentAsString();
         assertTrue(errorResponseString.contains(expectedErrorMessage));
+        // Verify the amount of times createAccount() was called
+        verify(accountService, times(1)).createAccount(sortCode, duplicateAccountName, accountNumber,
+                duplicateEmailAddress);
     }
 
     @ParameterizedTest
@@ -103,6 +110,9 @@ public class AccountControllerTests {
                 TestUtils.asJsonString(accountCreationReq), status().isBadRequest());
         final String errorResponseString = mvcResult.getResponse().getContentAsString();
         assertTrue(errorResponseString.contains(expectedErrorMessage), "Error message was actually " + errorResponseString);
+
+        // Verify the amount of times createAccount() was called
+        verify(accountService, times(1)).createAccount(sortCode, accountName, accountNumber, emailAddress);
     }
 
     @ParameterizedTest
@@ -118,6 +128,8 @@ public class AccountControllerTests {
         final MvcResult accountGetMvcResult = TestUtils.sendGetRequest(accountMockMvc, getAccountPath, status().isOk());
         validateAccount(accountGetMvcResult.getResponse().getContentAsString(), expectedIbanCode, accountNumber,
                 sortCode, expectedAccountName, expectedEmailAddress);
+        // Verify the amount of times findAccountByIban() was called
+        verify(accountService, times(1)).findAccountByIban(expectedIbanCode);
     }
 
     @ParameterizedTest
@@ -132,6 +144,8 @@ public class AccountControllerTests {
         final String errorResponseString = accountGetMvcResult.getResponse().getContentAsString();
         log.info("Error content: {}", errorResponseString);
         assertTrue(errorResponseString.contains(expectedNotFoundErrorMessage), "Error message was actually " + errorResponseString);
+        // Verify the amount of times findAccountByIban() was called
+        verify(accountService, times(1)).findAccountByIban(expectedIbanCode);
     }
 
     @ParameterizedTest
@@ -147,6 +161,8 @@ public class AccountControllerTests {
         final String errorResponseString = accountGetMvcResult.getResponse().getContentAsString();
         log.info("Error content: {}", errorResponseString);
         assertTrue(errorResponseString.contains(expectedNotFoundErrorMessage), "Error message was actually " + errorResponseString);
+        // Verify the amount of times findAccountByIban() was called
+        verify(accountService, times(1)).findAccountByIban(invalidIban);
     }
 
     @ParameterizedTest
@@ -172,6 +188,8 @@ public class AccountControllerTests {
         assertNotNull(accountUpdateResult.getResponse());
         final String responseContent = accountUpdateResult.getResponse().getContentAsString();
         validateAccount(responseContent, originalIban, existingAcNumber, existingSortCode, expectedNewName, expectedNewEmailAddress);
+        // Verify the amount of times updateAccount() was called
+        verify(accountService, times(1)).updateAccount(any(AccountUpdateRequest.class));
     }
 
     @ParameterizedTest
@@ -193,6 +211,8 @@ public class AccountControllerTests {
                 jsonRequest, status().isBadRequest());
         final String errorResponseString = mvcResult.getResponse().getContentAsString();
         assertTrue(errorResponseString.contains(ERROR_MSG_INVALID_IBAN));
+        // Verify the amount of times updateAccount() was called
+        verify(accountService, times(1)).updateAccount(any(AccountUpdateRequest.class));
     }
 
     @ParameterizedTest
@@ -218,6 +238,8 @@ public class AccountControllerTests {
         final String errorResponseString = mvcResult.getResponse().getContentAsString();
         log.info("Error content: {}", errorResponseString);
         assertTrue(errorResponseString.contains(expectedErrorMessage), "Error message was actually " + errorResponseString);
+        // Verify the amount of times updateAccount() was called
+        verify(accountService, times(1)).updateAccount(any(AccountUpdateRequest.class));
     }
 
     @ParameterizedTest
@@ -238,6 +260,8 @@ public class AccountControllerTests {
         assertNotNull(accountUpdateResult.getResponse());
         final String responseContent = accountUpdateResult.getResponse().getContentAsString();
         assertTrue(responseContent.contains(expectedDeletionMessage), "Response message was actually " + responseContent);
+        // Verify the amount of times deleteAccount() was called
+        verify(accountService, times(1)).deleteAccount(originalIban);
     }
 
     @ParameterizedTest
@@ -259,6 +283,8 @@ public class AccountControllerTests {
         assertNotNull(accountUpdateResult.getResponse());
         final String responseContent = accountUpdateResult.getResponse().getContentAsString();
         assertTrue(responseContent.contains(expectedDeletionMessage), "Response message was actually " + responseContent);
+        // Verify the amount of times deleteAccount() was called
+        verify(accountService, times(1)).deleteAccount(nonexistentIban);
     }
 
     @ParameterizedTest
@@ -274,6 +300,8 @@ public class AccountControllerTests {
                 status().isBadRequest());
         final String errorResponseString = mvcResult.getResponse().getContentAsString();
         assertTrue(errorResponseString.contains(ERROR_MSG_INVALID_IBAN));
+        // Verify the amount of times deleteAccount() was called
+        verify(accountService, times(1)).deleteAccount(invalidIban);
     }
 
     private static Stream<Arguments> createAccountsParameters() {

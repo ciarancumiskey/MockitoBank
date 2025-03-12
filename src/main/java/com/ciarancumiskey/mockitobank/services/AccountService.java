@@ -19,7 +19,13 @@ import static com.ciarancumiskey.mockitobank.utils.Constants.*;
 @Slf4j
 public class AccountService {
 
-    @Autowired private AccountDbRepository accountDbRepository;
+    private final AccountDbRepository accountDbRepository;
+    //private final String ibanPrefix;
+
+    @Autowired
+    public AccountService(final AccountDbRepository accountDbRepository) {
+        this.accountDbRepository = accountDbRepository;
+    }
 
     public Account createAccount(final String sortCode, final String accountName, final String accountNumber, final String emailAddress) throws AlreadyExistsException, InvalidArgumentsException {
         log.info("Creating new account for {}", accountName);
