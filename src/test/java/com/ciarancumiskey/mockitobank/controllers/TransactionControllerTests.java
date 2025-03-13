@@ -5,6 +5,7 @@ import com.ciarancumiskey.mockitobank.exceptions.InvalidArgumentsException;
 import com.ciarancumiskey.mockitobank.exceptions.NotFoundException;
 import com.ciarancumiskey.mockitobank.models.Account;
 import com.ciarancumiskey.mockitobank.models.Transaction;
+import com.ciarancumiskey.mockitobank.models.TransactionRequest;
 import com.ciarancumiskey.mockitobank.services.AccountService;
 import com.ciarancumiskey.mockitobank.utils.TestUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -29,11 +30,12 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Slf4j
-@WebMvcTest(TransactionControllerTests.class)
+@WebMvcTest(TransactionController.class)
 public class TransactionControllerTests {
     @Autowired
     private MockMvc transactionsMockMvc;
 
+    // Needed for account management
     @MockitoBean
     private AccountService accountService;
 
@@ -47,13 +49,16 @@ public class TransactionControllerTests {
         when(accountServiceProperties.getBankIdentifierCode()).thenReturn(TEST_BIC);
         final Account user1 = new Account(TEST_BIC, SORT_CODE_1, "Testina Hendricks", AC_NUMBER_1,
                 "testina.h@testmail.com");
-        user1.setBalance(BigDecimal.valueOf(1050));
+        user1.setBalance(BigDecimal.valueOf(10500));
         final Account user2 = new Account(TEST_BIC, SORT_CODE_2, "Testopher Walken", AC_NUMBER_2,
                 "testopher.walken@testmail.com");
+        user2.setBalance(BigDecimal.valueOf(8750));
         final Account user3 = new Account(TEST_BIC, SORT_CODE_3, "Testoph Waltz", AC_NUMBER_3,
                 "testophwaltz@testmail.at");
+        user3.setBalance(BigDecimal.valueOf(9134.63));
         final Account user4 = new Account(TEST_BIC, SORT_CODE_4, "Luca Badoer", AC_NUMBER_1,
                 "lucabadoer@maranello.it");
+        user4.setBalance(BigDecimal.valueOf(1814.60));
         try {
             when(accountService.findAccountByIban(IBAN_1)).thenReturn(user1);
             when(accountService.findAccountByIban(IBAN_2)).thenReturn(user2);
@@ -67,15 +72,15 @@ public class TransactionControllerTests {
     @ParameterizedTest
     @MethodSource("depositParameters")
     void depositMoneyTest(final String recipientIban, final BigDecimal amount, final BigDecimal expectedBalance) throws Exception {
-        final Transaction deposit = new Transaction(recipientIban, "DEPOSIT", amount);
+        final TransactionRequest depositRequest = new TransactionRequest(recipientIban, "DEPOSIT", amount);
         final MvcResult depositMvcResult = TestUtils.sendPostRequest(transactionsMockMvc,
-                TRANSACTIONS_PATH + TRANSFER_PATH, TestUtils.asJsonString(deposit), status().isOk());
-
+                TRANSACTIONS_PATH + TRANSFER_PATH, TestUtils.asJsonString(depositRequest), status().isOk());
+        //todo verify that the account's balance has increased by the deposit amount
     }
 
     private static Stream<Arguments> depositParameters() {
         return Stream.of(
-                Arguments.of(IBAN_1, BigDecimal.valueOf(100), BigDecimal.valueOf(1150))
+                Arguments.of(IBAN_1, BigDecimal.valueOf(1000), BigDecimal.valueOf(11500))
         );
     }
 }

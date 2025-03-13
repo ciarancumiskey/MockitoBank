@@ -7,14 +7,10 @@ import com.ciarancumiskey.mockitobank.models.Account;
 import com.ciarancumiskey.mockitobank.models.AccountCreationRequest;
 import com.ciarancumiskey.mockitobank.models.AccountUpdateRequest;
 import com.ciarancumiskey.mockitobank.services.AccountService;
-import com.ciarancumiskey.mockitobank.utils.Constants;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import jakarta.validation.Valid;
-import java.net.URI;
+import org.springframework.web.bind.annotation.RestController;
 
 import static com.ciarancumiskey.mockitobank.utils.Constants.g;
 
@@ -65,5 +61,4 @@ public class AccountController implements IAccountController {
     public String deleteAccount(String accountIban) throws NotFoundException, InvalidArgumentsException {
         return accountService.deleteAccount(accountIban);
     }
-    // TODO: Delete
 }
