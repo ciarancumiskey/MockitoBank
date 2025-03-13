@@ -4,9 +4,9 @@ import com.ciarancumiskey.mockitobank.configuration.AccountServiceProperties;
 import com.ciarancumiskey.mockitobank.exceptions.InvalidArgumentsException;
 import com.ciarancumiskey.mockitobank.exceptions.NotFoundException;
 import com.ciarancumiskey.mockitobank.models.Account;
-import com.ciarancumiskey.mockitobank.models.Transaction;
 import com.ciarancumiskey.mockitobank.models.TransactionRequest;
 import com.ciarancumiskey.mockitobank.services.AccountService;
+import com.ciarancumiskey.mockitobank.services.TransactionService;
 import com.ciarancumiskey.mockitobank.utils.TestUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,9 +23,11 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.math.BigDecimal;
 import java.util.stream.Stream;
 
+import static com.ciarancumiskey.mockitobank.models.TransactionType.DEPOSIT;
 import static com.ciarancumiskey.mockitobank.utils.Constants.TRANSACTIONS_PATH;
 import static com.ciarancumiskey.mockitobank.utils.Constants.TRANSFER_PATH;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -38,6 +40,9 @@ public class TransactionControllerTests {
     // Needed for account management
     @MockitoBean
     private AccountService accountService;
+
+    @MockitoBean
+    private TransactionService transactionService;
 
     @Mock
     private AccountServiceProperties accountServiceProperties;
@@ -72,15 +77,25 @@ public class TransactionControllerTests {
     @ParameterizedTest
     @MethodSource("depositParameters")
     void depositMoneyTest(final String recipientIban, final BigDecimal amount, final BigDecimal expectedBalance) throws Exception {
-        final TransactionRequest depositRequest = new TransactionRequest(recipientIban, "DEPOSIT", amount);
+        final TransactionRequest depositRequest = new TransactionRequest(DEPOSIT, recipientIban, "DEPOSIT", amount);
         final MvcResult depositMvcResult = TestUtils.sendPostRequest(transactionsMockMvc,
                 TRANSACTIONS_PATH + TRANSFER_PATH, TestUtils.asJsonString(depositRequest), status().isOk());
         //todo verify that the account's balance has increased by the deposit amount
+        assertNotNull(depositMvcResult);
+        assertNotNull(depositMvcResult.getResponse());
+        final String depositResultContent = depositMvcResult.getResponse().getContentAsString();
     }
 
     private static Stream<Arguments> depositParameters() {
         return Stream.of(
-                Arguments.of(IBAN_1, BigDecimal.valueOf(1000), BigDecimal.valueOf(11500))
+                Arguments.of(IBAN_1, BigDecimal.valueOf(1000), BigDecimal.valueOf(11500)),
+                Arguments.of(IBAN_2, BigDecimal.valueOf(8750), BigDecimal.valueOf(17500)),
+                Arguments.of(IBAN_3, BigDecimal.valueOf(550.50), BigDecimal.valueOf(9685.13)),
+                Arguments.of(IBAN_4, BigDecimal.valueOf(897.57), BigDecimal.valueOf(2712.17)),
+                Arguments.of(IBAN_1, BigDecimal.valueOf(1130), BigDecimal.valueOf(11630)),
+                Arguments.of(IBAN_2, BigDecimal.valueOf(1303), BigDecimal.valueOf(10353)),
+                Arguments.of(IBAN_3, BigDecimal.valueOf(2025.03), BigDecimal.valueOf(1159.66)),
+                Arguments.of(IBAN_4, BigDecimal.valueOf(313.32), BigDecimal.valueOf(2127.92))
         );
     }
 }

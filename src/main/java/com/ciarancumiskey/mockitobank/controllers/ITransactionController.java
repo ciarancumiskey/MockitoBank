@@ -1,5 +1,6 @@
 package com.ciarancumiskey.mockitobank.controllers;
 
+import com.ciarancumiskey.mockitobank.exceptions.NotFoundException;
 import com.ciarancumiskey.mockitobank.models.TransactionRequest;
 import com.ciarancumiskey.mockitobank.utils.Constants;
 import io.swagger.v3.oas.annotations.Operation;
@@ -49,5 +50,5 @@ public interface ITransactionController {
             })
     @PostMapping(value = Constants.TRANSFER_PATH, consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    String transferMoney(@Valid @RequestBody final TransactionRequest transaction);
+    String transferMoney(@Valid @RequestBody final TransactionRequest transaction) throws NotFoundException;
 }

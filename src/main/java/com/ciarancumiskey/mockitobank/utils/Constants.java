@@ -32,6 +32,9 @@ public class Constants {
     public static final String ERROR_MSG_INVALID_AC_NUMBER = "Account number %s is invalid, it must be 8 numbers and nothing else.";
     public static final String ERROR_MSG_INVALID_IBAN = "Invalid IBAN provided. IBAN must be 22 characters long, starting with the bank's BIC.";
     public static final String ERROR_MSG_INVALID_SORT_CODE = "Sort code %s is invalid, it must be 6 numbers and nothing else.";
+    public static final String ERROR_MSG_NOT_ENOUGH_MONEY = "Not enough money in account.";
+    public static final String ERROR_MSG_PAYEE_NOT_FOUND = "Unable to find payee with IBAN %s";
+    public static final String ERROR_MSG_PAYER_NOT_FOUND = "Unable to find payer with IBAN %s";
 
     // Other response messages
     public static final String MSG_DELETION_SUCCESSFUL = "Account with IBAN %s deleted successfully.";
