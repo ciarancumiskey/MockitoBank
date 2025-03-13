@@ -28,6 +28,7 @@ import java.math.BigDecimal;
 import java.util.stream.Stream;
 
 import static com.ciarancumiskey.mockitobank.models.TransactionType.DEPOSIT;
+import static com.ciarancumiskey.mockitobank.models.TransactionType.WITHDRAWAL;
 import static com.ciarancumiskey.mockitobank.utils.Constants.TRANSACTIONS_PATH;
 import static com.ciarancumiskey.mockitobank.utils.Constants.TRANSFER_PATH;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.AC_NUMBER_1;
@@ -117,6 +118,31 @@ public class TransactionControllerTests {
         assertEquals(expectedBalance, transactionResponse.getUpdatedAccountBalances().get("payee"));
     }
 
+    @ParameterizedTest
+    @MethodSource("withdrawalParameters")
+    void withdrawMoneyTest(final String recipientIban, final BigDecimal amount, final BigDecimal expectedBalance) throws Exception {
+        final MockHttpServletRequest request = new MockHttpServletRequest();
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+
+        final TransactionRequest depositRequest = new TransactionRequest(WITHDRAWAL, recipientIban, "DEPOSIT", amount);
+        final TransactionResponse expectedResponse = new TransactionResponse();
+        expectedResponse.updatePayerBalance(expectedBalance);
+        when(transactionService.transferMoney(any(TransactionRequest.class))).thenReturn(expectedResponse);
+
+        // Verify that the account's balance has increased by the deposit amount
+        final MvcResult depositMvcResult = TestUtils.sendPostRequest(transactionsMockMvc,
+                TRANSACTIONS_PATH + TRANSFER_PATH, TestUtils.asJsonString(depositRequest), status().isOk());
+        assertNotNull(depositMvcResult);
+        assertNotNull(depositMvcResult.getResponse());
+        final String depositResultContent = depositMvcResult.getResponse().getContentAsString();
+        assertFalse(depositResultContent.isBlank());
+        final TransactionResponse transactionResponse = (TransactionResponse)
+                TestUtils.fromJsonString(depositResultContent, TransactionResponse.class);
+        assertNotNull(transactionResponse);
+        assertNotNull(transactionResponse.getUpdatedAccountBalances());
+        assertEquals(expectedBalance, transactionResponse.getUpdatedAccountBalances().get("payer"));
+    }
+
     private static Stream<Arguments> depositParameters() {
         return Stream.of(
                 Arguments.of(IBAN_1, BigDecimal.valueOf(1000), BigDecimal.valueOf(11500)),
@@ -127,6 +153,19 @@ public class TransactionControllerTests {
                 Arguments.of(IBAN_2, BigDecimal.valueOf(1303), BigDecimal.valueOf(10353)),
                 Arguments.of(IBAN_3, BigDecimal.valueOf(2025.03), BigDecimal.valueOf(1159.66)),
                 Arguments.of(IBAN_4, BigDecimal.valueOf(313.32), BigDecimal.valueOf(2127.92))
+        );
+    }
+
+    private static Stream<Arguments> withdrawalParameters() {
+        return Stream.of(
+                Arguments.of(IBAN_1, BigDecimal.valueOf(1000), BigDecimal.valueOf(9500)),
+                Arguments.of(IBAN_2, BigDecimal.valueOf(8750), BigDecimal.ZERO),
+                Arguments.of(IBAN_3, BigDecimal.valueOf(550.50), BigDecimal.valueOf(8584.13)),
+                Arguments.of(IBAN_4, BigDecimal.valueOf(897.57), BigDecimal.valueOf(917.03)),
+                Arguments.of(IBAN_1, BigDecimal.valueOf(1130), BigDecimal.valueOf(9370)),
+                Arguments.of(IBAN_2, BigDecimal.valueOf(1303), BigDecimal.valueOf(7747)),
+                Arguments.of(IBAN_3, BigDecimal.valueOf(25.03), BigDecimal.valueOf(1109.6)),
+                Arguments.of(IBAN_4, BigDecimal.valueOf(313.32), BigDecimal.valueOf(1501.28))
         );
     }
 }
