@@ -158,6 +158,25 @@ public class TransactionControllerTests {
     }
 
     @ParameterizedTest
+    @MethodSource("withdrawTooMuchParameters")
+    void withdrawTooMuchMoneyTest(final String recipientIban, final BigDecimal amount) throws Exception {
+        final MockHttpServletRequest request = new MockHttpServletRequest();
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+
+        final TransactionRequest depositRequest = new TransactionRequest(WITHDRAWAL, recipientIban, "DEPOSIT", amount);
+        when(transactionService.transferMoney(any(TransactionRequest.class))).thenThrow(new InvalidArgumentsException(ERROR_MSG_NOT_ENOUGH_MONEY));
+
+        // Verify that the account's balance has increased by the deposit amount
+        final MvcResult depositMvcResult = TestUtils.sendPostRequest(transactionsMockMvc,
+                TRANSACTIONS_PATH + TRANSFER_PATH, TestUtils.asJsonString(depositRequest), status().isBadRequest());
+        assertNotNull(depositMvcResult);
+        assertNotNull(depositMvcResult.getResponse());
+        final String depositResultContent = depositMvcResult.getResponse().getContentAsString();
+        assertFalse(depositResultContent.isBlank());
+        assertTrue(depositResultContent.contains(ERROR_MSG_NOT_ENOUGH_MONEY));
+    }
+
+    @ParameterizedTest
     @MethodSource("missingAccountParameters")
     void depositWithMissingAccountTests(final String payeeIban, final BigDecimal transactionAmount) throws Exception {
         final TransactionRequest transactionRequest = new TransactionRequest(DEPOSIT, payeeIban, null, transactionAmount);
@@ -221,6 +240,30 @@ public class TransactionControllerTests {
                 Arguments.of(IBAN_3, BigDecimal.valueOf(12300.37), BigDecimal.valueOf(-3165)),
                 Arguments.of(IBAN_3, BigDecimal.valueOf(10100.45), BigDecimal.valueOf(-964.92)),
                 Arguments.of(IBAN_3, BigDecimal.valueOf(10000), BigDecimal.valueOf(-865.37)));
+    }
+
+    private static Stream<Arguments> withdrawTooMuchParameters(){
+        return Stream.of(
+                Arguments.of(IBAN_1, BigDecimal.valueOf(20000)),
+                Arguments.of(IBAN_1, BigDecimal.valueOf(Long.MAX_VALUE)),
+                Arguments.of(IBAN_1, BigDecimal.valueOf(123456)),
+                Arguments.of(IBAN_1, BigDecimal.valueOf(1234567)),
+                Arguments.of(IBAN_1, BigDecimal.valueOf(12345678)),
+                Arguments.of(IBAN_1, BigDecimal.valueOf(123456789)),
+                Arguments.of(IBAN_2, BigDecimal.valueOf(123456)),
+                Arguments.of(IBAN_2, BigDecimal.valueOf(1234567)),
+                Arguments.of(IBAN_2, BigDecimal.valueOf(12345678)),
+                Arguments.of(IBAN_2, BigDecimal.valueOf(123456789)),
+                Arguments.of(IBAN_3, BigDecimal.valueOf(123456)),
+                Arguments.of(IBAN_3, BigDecimal.valueOf(1234567)),
+                Arguments.of(IBAN_3, BigDecimal.valueOf(12345678)),
+                Arguments.of(IBAN_3, BigDecimal.valueOf(123456789)),
+                Arguments.of(IBAN_4, BigDecimal.valueOf(123456)),
+                Arguments.of(IBAN_4, BigDecimal.valueOf(1234567)),
+                Arguments.of(IBAN_4, BigDecimal.valueOf(12345678)),
+                Arguments.of(IBAN_4, BigDecimal.valueOf(123456789)),
+                Arguments.of(IBAN_4, BigDecimal.valueOf(200000))
+        );
     }
 
     private static Stream<Arguments> missingAccountParameters() {
