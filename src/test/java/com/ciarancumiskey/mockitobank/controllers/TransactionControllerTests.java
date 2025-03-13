@@ -30,8 +30,7 @@ import java.util.stream.Stream;
 
 import static com.ciarancumiskey.mockitobank.models.TransactionType.DEPOSIT;
 import static com.ciarancumiskey.mockitobank.models.TransactionType.WITHDRAWAL;
-import static com.ciarancumiskey.mockitobank.utils.Constants.TRANSACTIONS_PATH;
-import static com.ciarancumiskey.mockitobank.utils.Constants.TRANSFER_PATH;
+import static com.ciarancumiskey.mockitobank.utils.Constants.*;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.AC_NUMBER_1;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.AC_NUMBER_2;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.AC_NUMBER_3;
@@ -85,15 +84,19 @@ public class TransactionControllerTests {
         final Account user1 = new Account(TEST_BIC, SORT_CODE_1, "Testina Hendricks", AC_NUMBER_1,
                 "testina.h@testmail.com");
         user1.setBalance(BigDecimal.valueOf(10500));
+        user1.setOverdraftLimit(BigDecimal.valueOf(10000));
         final Account user2 = new Account(TEST_BIC, SORT_CODE_2, "Testopher Walken", AC_NUMBER_2,
                 "testopher.walken@testmail.com");
         user2.setBalance(BigDecimal.valueOf(8750));
+        // don't give user2 an overdraft
         final Account user3 = new Account(TEST_BIC, SORT_CODE_3, "Testoph Waltz", AC_NUMBER_3,
                 "testophwaltz@testmail.at");
         user3.setBalance(BigDecimal.valueOf(9134.63));
+        user3.setOverdraftLimit(BigDecimal.valueOf(5000));
         final Account user4 = new Account(TEST_BIC, SORT_CODE_4, "Luca Badoer", AC_NUMBER_1,
                 "lucabadoer@maranello.it");
         user4.setBalance(BigDecimal.valueOf(1814.60));
+        // don't give user4 an overdraft
         try {
             when(accountService.findAccountByIban(IBAN_1)).thenReturn(user1);
             when(accountService.findAccountByIban(IBAN_2)).thenReturn(user2);
@@ -210,8 +213,14 @@ public class TransactionControllerTests {
                 Arguments.of(IBAN_1, BigDecimal.valueOf(1130), BigDecimal.valueOf(9370)),
                 Arguments.of(IBAN_2, BigDecimal.valueOf(1303), BigDecimal.valueOf(7747)),
                 Arguments.of(IBAN_3, BigDecimal.valueOf(25.03), BigDecimal.valueOf(1109.6)),
-                Arguments.of(IBAN_4, BigDecimal.valueOf(313.32), BigDecimal.valueOf(1501.28))
-        );
+                Arguments.of(IBAN_4, BigDecimal.valueOf(313.32), BigDecimal.valueOf(1501.28)),
+                // Test the accounts' overdrafts
+                Arguments.of(IBAN_1, BigDecimal.valueOf(11300), BigDecimal.valueOf(-800)),
+                Arguments.of(IBAN_1, BigDecimal.valueOf(12000), BigDecimal.valueOf(-1500)),
+                Arguments.of(IBAN_1, BigDecimal.valueOf(18600.99), BigDecimal.valueOf(-8099.01)),
+                Arguments.of(IBAN_3, BigDecimal.valueOf(12300.37), BigDecimal.valueOf(-3165)),
+                Arguments.of(IBAN_3, BigDecimal.valueOf(10100.45), BigDecimal.valueOf(-964.92)),
+                Arguments.of(IBAN_3, BigDecimal.valueOf(10000), BigDecimal.valueOf(-865.37)));
     }
 
     private static Stream<Arguments> missingAccountParameters() {
