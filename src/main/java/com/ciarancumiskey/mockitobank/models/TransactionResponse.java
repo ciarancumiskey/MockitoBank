@@ -10,4 +10,12 @@ import java.util.Map;
 public class TransactionResponse {
     // contains updated balances of payee and payer (if applicable)
     private final Map<String, BigDecimal> updatedAccountBalances = new HashMap<>();
+
+    public void updatePayeeBalance(final BigDecimal updatedBalance) {
+        this.updatedAccountBalances.put("payee", updatedBalance);
+    }
+
+    public void updatePayerBalance(final BigDecimal updatedBalance) {
+        this.updatedAccountBalances.put("payer", updatedBalance);
+    }
 }

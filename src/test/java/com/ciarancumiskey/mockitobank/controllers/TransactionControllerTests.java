@@ -5,6 +5,7 @@ import com.ciarancumiskey.mockitobank.exceptions.InvalidArgumentsException;
 import com.ciarancumiskey.mockitobank.exceptions.NotFoundException;
 import com.ciarancumiskey.mockitobank.models.Account;
 import com.ciarancumiskey.mockitobank.models.TransactionRequest;
+import com.ciarancumiskey.mockitobank.models.TransactionResponse;
 import com.ciarancumiskey.mockitobank.services.AccountService;
 import com.ciarancumiskey.mockitobank.services.TransactionService;
 import com.ciarancumiskey.mockitobank.utils.TestUtils;
@@ -16,9 +17,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.math.BigDecimal;
 import java.util.stream.Stream;
@@ -26,8 +30,22 @@ import java.util.stream.Stream;
 import static com.ciarancumiskey.mockitobank.models.TransactionType.DEPOSIT;
 import static com.ciarancumiskey.mockitobank.utils.Constants.TRANSACTIONS_PATH;
 import static com.ciarancumiskey.mockitobank.utils.Constants.TRANSFER_PATH;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.*;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.AC_NUMBER_1;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.AC_NUMBER_2;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.AC_NUMBER_3;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_1;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_2;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_3;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_4;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.SORT_CODE_1;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.SORT_CODE_2;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.SORT_CODE_3;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.SORT_CODE_4;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.TEST_BIC;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -77,13 +95,26 @@ public class TransactionControllerTests {
     @ParameterizedTest
     @MethodSource("depositParameters")
     void depositMoneyTest(final String recipientIban, final BigDecimal amount, final BigDecimal expectedBalance) throws Exception {
+        final MockHttpServletRequest request = new MockHttpServletRequest();
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+
         final TransactionRequest depositRequest = new TransactionRequest(DEPOSIT, recipientIban, "DEPOSIT", amount);
+        final TransactionResponse expectedResponse = new TransactionResponse();
+        expectedResponse.updatePayeeBalance(expectedBalance);
+        when(transactionService.transferMoney(any(TransactionRequest.class))).thenReturn(expectedResponse);
+
+        // Verify that the account's balance has increased by the deposit amount
         final MvcResult depositMvcResult = TestUtils.sendPostRequest(transactionsMockMvc,
                 TRANSACTIONS_PATH + TRANSFER_PATH, TestUtils.asJsonString(depositRequest), status().isOk());
-        //todo verify that the account's balance has increased by the deposit amount
         assertNotNull(depositMvcResult);
         assertNotNull(depositMvcResult.getResponse());
         final String depositResultContent = depositMvcResult.getResponse().getContentAsString();
+        assertFalse(depositResultContent.isBlank());
+        final TransactionResponse transactionResponse = (TransactionResponse)
+                TestUtils.fromJsonString(depositResultContent, TransactionResponse.class);
+        assertNotNull(transactionResponse);
+        assertNotNull(transactionResponse.getUpdatedAccountBalances());
+        assertEquals(expectedBalance, transactionResponse.getUpdatedAccountBalances().get("payee"));
     }
 
     private static Stream<Arguments> depositParameters() {

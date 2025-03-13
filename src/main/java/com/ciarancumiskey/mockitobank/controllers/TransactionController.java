@@ -1,5 +1,6 @@
 package com.ciarancumiskey.mockitobank.controllers;
 
+import com.ciarancumiskey.mockitobank.exceptions.InvalidArgumentsException;
 import com.ciarancumiskey.mockitobank.exceptions.NotFoundException;
 import com.ciarancumiskey.mockitobank.models.TransactionRequest;
 import com.ciarancumiskey.mockitobank.models.TransactionResponse;
@@ -15,12 +16,11 @@ import static com.ciarancumiskey.mockitobank.utils.Constants.g;
 @RestController
 @Slf4j
 public class TransactionController implements ITransactionController {
-
     @Autowired private TransactionService transactionService;
 
     @Override
-    public String transferMoney(TransactionRequest transactionRequest) throws NotFoundException {
-        // TODO: Create service class
+    public String transferMoney(TransactionRequest transactionRequest)
+            throws InvalidArgumentsException, NotFoundException {
         final TransactionResponse transactionResponse = transactionService.transferMoney(transactionRequest);
         return g.toJson(transactionResponse);
     }

@@ -23,9 +23,8 @@ public class AccountController implements IAccountController {
     @Override
     public String createAccount(final AccountCreationRequest accountCreationRequest)
             throws AlreadyExistsException, InvalidArgumentsException {
-        final Account newAccount;
         try {
-            newAccount = accountService.createAccount(accountCreationRequest.getSortCode(), accountCreationRequest.getAccountName(), accountCreationRequest.getAccountNumber(), accountCreationRequest.getEmailAddress());
+            final Account newAccount = accountService.createAccount(accountCreationRequest.getSortCode(), accountCreationRequest.getAccountName(), accountCreationRequest.getAccountNumber(), accountCreationRequest.getEmailAddress());
             return g.toJson(newAccount);
         } catch (AlreadyExistsException | InvalidArgumentsException e) {
             log.error("Error when trying to create account: {}", e.getMessage(), e);
