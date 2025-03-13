@@ -7,7 +7,6 @@ import com.ciarancumiskey.mockitobank.models.Account;
 import com.ciarancumiskey.mockitobank.models.TransactionRequest;
 import com.ciarancumiskey.mockitobank.models.TransactionResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.aspectj.weaver.ast.Not;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -75,10 +74,10 @@ public class TransactionService {
 
     private Account verifyTransactionParty(final String ibanToFind, final String errorMsgIfNotFound) throws NotFoundException {
         final Optional<Account> optTransactionPartyAc = accountDbRepository.findById(ibanToFind);
-        final Account transactionPartyAc = optTransactionPartyAc.orElseGet(null);
-        if(transactionPartyAc == null){
+        if(optTransactionPartyAc.isEmpty()){
             throw new NotFoundException(errorMsgIfNotFound);
+        } else {
+            return optTransactionPartyAc.get();
         }
-        return transactionPartyAc;
     }
 }

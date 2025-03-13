@@ -8,6 +8,7 @@ import com.ciarancumiskey.mockitobank.models.TransactionRequest;
 import com.ciarancumiskey.mockitobank.models.TransactionResponse;
 import com.ciarancumiskey.mockitobank.services.AccountService;
 import com.ciarancumiskey.mockitobank.services.TransactionService;
+import com.ciarancumiskey.mockitobank.utils.Constants;
 import com.ciarancumiskey.mockitobank.utils.TestUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +39,13 @@ import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_1;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_2;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_3;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_4;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_5;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_6;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_INVALID_EMAIL;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_WHITESPACE_1;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_WHITESPACE_2;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_WHITESPACE_3;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_WO_EMAIL;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.SORT_CODE_1;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.SORT_CODE_2;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.SORT_CODE_3;
@@ -46,7 +54,10 @@ import static com.ciarancumiskey.mockitobank.utils.TestConstants.TEST_BIC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -143,6 +154,40 @@ public class TransactionControllerTests {
         assertEquals(expectedBalance, transactionResponse.getUpdatedAccountBalances().get("payer"));
     }
 
+    @ParameterizedTest
+    @MethodSource("missingAccountParameters")
+    void depositWithMissingAccountTests(final String payeeIban, final BigDecimal transactionAmount) throws Exception {
+        final TransactionRequest transactionRequest = new TransactionRequest(DEPOSIT, payeeIban, null, transactionAmount);
+        final String expectedErrorMessage = Constants.ERROR_MSG_PAYEE_NOT_FOUND.formatted(payeeIban);
+        when(transactionService.transferMoney(any(TransactionRequest.class))).thenThrow(new NotFoundException(expectedErrorMessage));
+
+        final MvcResult accountGetMvcResult = TestUtils.sendPostRequest(transactionsMockMvc,
+                TRANSACTIONS_PATH + TRANSFER_PATH, TestUtils.asJsonString(transactionRequest), status().isNotFound());
+        final String errorResponseString = accountGetMvcResult.getResponse().getContentAsString();
+        log.info("Error content: {}", errorResponseString);
+        assertTrue(errorResponseString.contains(expectedErrorMessage),
+                "Error message was actually " + errorResponseString);
+        // Verify the amount of times findAccountByIban() was called
+        verify(transactionService, times(1)).transferMoney(any(TransactionRequest.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("missingAccountParameters")
+    void withdrawWithMissingAccountTests(final String payeeIban, final BigDecimal transactionAmount) throws Exception {
+        final TransactionRequest transactionRequest = new TransactionRequest(WITHDRAWAL, payeeIban, null, transactionAmount);
+        final String expectedErrorMessage = Constants.ERROR_MSG_PAYER_NOT_FOUND.formatted(payeeIban);
+        when(transactionService.transferMoney(any(TransactionRequest.class))).thenThrow(new NotFoundException(expectedErrorMessage));
+
+        final MvcResult accountGetMvcResult = TestUtils.sendPostRequest(transactionsMockMvc,
+                TRANSACTIONS_PATH + TRANSFER_PATH, TestUtils.asJsonString(transactionRequest), status().isNotFound());
+        final String errorResponseString = accountGetMvcResult.getResponse().getContentAsString();
+        log.info("Error content: {}", errorResponseString);
+        assertTrue(errorResponseString.contains(expectedErrorMessage),
+                "Error message was actually " + errorResponseString);
+        // Verify the amount of times findAccountByIban() was called
+        verify(transactionService, times(1)).transferMoney(any(TransactionRequest.class));
+    }
+
     private static Stream<Arguments> depositParameters() {
         return Stream.of(
                 Arguments.of(IBAN_1, BigDecimal.valueOf(1000), BigDecimal.valueOf(11500)),
@@ -166,6 +211,18 @@ public class TransactionControllerTests {
                 Arguments.of(IBAN_2, BigDecimal.valueOf(1303), BigDecimal.valueOf(7747)),
                 Arguments.of(IBAN_3, BigDecimal.valueOf(25.03), BigDecimal.valueOf(1109.6)),
                 Arguments.of(IBAN_4, BigDecimal.valueOf(313.32), BigDecimal.valueOf(1501.28))
+        );
+    }
+
+    private static Stream<Arguments> missingAccountParameters() {
+        return Stream.of(
+                Arguments.of(IBAN_5, BigDecimal.valueOf(1000)),
+                Arguments.of(IBAN_6, BigDecimal.valueOf(8750)),
+                Arguments.of(IBAN_WO_EMAIL, BigDecimal.valueOf(550.50)),
+                Arguments.of(IBAN_INVALID_EMAIL, BigDecimal.valueOf(897.57)),
+                Arguments.of(IBAN_WHITESPACE_1, BigDecimal.valueOf(1130)),
+                Arguments.of(IBAN_WHITESPACE_2, BigDecimal.valueOf(1130)),
+                Arguments.of(IBAN_WHITESPACE_3, BigDecimal.valueOf(1130))
         );
     }
 }

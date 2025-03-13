@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 @Setter
 @AllArgsConstructor
 public class TransactionRequest {
-    private final TransactionType transactionType;
+    @NonNull private final TransactionType transactionType;
     private final String payee;
     private final String payer;
     @NonNull private final BigDecimal amount;
