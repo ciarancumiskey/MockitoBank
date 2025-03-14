@@ -248,6 +248,24 @@ public class TransactionControllerTests {
         verify(transactionService, times(1)).transferMoney(any(TransactionRequest.class));
     }
 
+    @ParameterizedTest
+    @MethodSource("transferToMissingAccountParameters")
+    void withdrawWithMissingAccountTests(final String payerIban, final String payeeIban,
+                                         final BigDecimal transactionAmount, final String expectedErrorMessage) throws Exception {
+        final TransactionRequest transactionRequest = new TransactionRequest(TRANSFER, payeeIban, payerIban,
+                transactionAmount, "This account shouldn't exist");
+        when(transactionService.transferMoney(any(TransactionRequest.class)))
+                .thenThrow(new NotFoundException(expectedErrorMessage));
+
+        final MvcResult accountGetMvcResult = sendTransactionRequest(transactionRequest, status().isNotFound());
+        final String errorResponseString = accountGetMvcResult.getResponse().getContentAsString();
+        log.info("Error content: {}", errorResponseString);
+        assertTrue(errorResponseString.contains(expectedErrorMessage),
+                "Error message was actually " + errorResponseString);
+        // Verify the amount of times findAccountByIban() was called
+        verify(transactionService, times(1)).transferMoney(any(TransactionRequest.class));
+    }
+
     private MvcResult sendTransactionRequest(final TransactionRequest transactionRequest,
                                              final ResultMatcher expectedStatus){
         try {
@@ -294,17 +312,26 @@ public class TransactionControllerTests {
     // 10500, 8750, 9134.63, 1814.60
     private static Stream<Arguments> transferParameters() {
         return Stream.of(
-                Arguments.of(IBAN_1, IBAN_2, BigDecimal.valueOf(1000), BigDecimal.valueOf(9500), BigDecimal.valueOf(9750)),
+                Arguments.of(IBAN_1, IBAN_2, BigDecimal.valueOf(1000), BigDecimal.valueOf(9500),
+                        BigDecimal.valueOf(9750)),
                 Arguments.of(IBAN_2, IBAN_1, BigDecimal.valueOf(8750), BigDecimal.ZERO, BigDecimal.valueOf(19250)),
-                Arguments.of(IBAN_3, IBAN_4, BigDecimal.valueOf(550.50), BigDecimal.valueOf(8584.13), BigDecimal.valueOf(2365.1)),
-                Arguments.of(IBAN_4, IBAN_3, BigDecimal.valueOf(897.57), BigDecimal.valueOf(917.03), BigDecimal.valueOf(10032.2)),
+                Arguments.of(IBAN_3, IBAN_4, BigDecimal.valueOf(550.50), BigDecimal.valueOf(8584.13),
+                        BigDecimal.valueOf(2365.1)),
+                Arguments.of(IBAN_4, IBAN_3, BigDecimal.valueOf(897.57), BigDecimal.valueOf(917.03),
+                        BigDecimal.valueOf(10032.2)),
                 // Test the accounts' overdrafts
-                Arguments.of(IBAN_1, IBAN_2, BigDecimal.valueOf(11300), BigDecimal.valueOf(-800), BigDecimal.valueOf(20050)),
-                Arguments.of(IBAN_1, IBAN_3, BigDecimal.valueOf(12000), BigDecimal.valueOf(-1500), BigDecimal.valueOf(21134.63)),
-                Arguments.of(IBAN_1, IBAN_4, BigDecimal.valueOf(18600.99), BigDecimal.valueOf(-8099.01), BigDecimal.valueOf(20415.59)),
-                Arguments.of(IBAN_3, IBAN_1, BigDecimal.valueOf(12300.37), BigDecimal.valueOf(-3165), BigDecimal.valueOf(22800.37)),
-                Arguments.of(IBAN_3, IBAN_2, BigDecimal.valueOf(10100.45), BigDecimal.valueOf(-964.92), BigDecimal.valueOf(18850.45)),
-                Arguments.of(IBAN_3, IBAN_4, BigDecimal.valueOf(10000), BigDecimal.valueOf(-865.37), BigDecimal.valueOf(11814.6)));
+                Arguments.of(IBAN_1, IBAN_2, BigDecimal.valueOf(11300), BigDecimal.valueOf(-800),
+                        BigDecimal.valueOf(20050)),
+                Arguments.of(IBAN_1, IBAN_3, BigDecimal.valueOf(12000), BigDecimal.valueOf(-1500),
+                        BigDecimal.valueOf(21134.63)),
+                Arguments.of(IBAN_1, IBAN_4, BigDecimal.valueOf(18600.99), BigDecimal.valueOf(-8099.01),
+                        BigDecimal.valueOf(20415.59)),
+                Arguments.of(IBAN_3, IBAN_1, BigDecimal.valueOf(12300.37), BigDecimal.valueOf(-3165),
+                        BigDecimal.valueOf(22800.37)),
+                Arguments.of(IBAN_3, IBAN_2, BigDecimal.valueOf(10100.45), BigDecimal.valueOf(-964.92),
+                        BigDecimal.valueOf(18850.45)),
+                Arguments.of(IBAN_3, IBAN_4, BigDecimal.valueOf(10000), BigDecimal.valueOf(-865.37),
+                        BigDecimal.valueOf(11814.6)));
     }
 
     private static Stream<Arguments> withdrawTooMuchParameters(){
@@ -358,5 +385,24 @@ public class TransactionControllerTests {
                 Arguments.of(IBAN_WHITESPACE_2, BigDecimal.valueOf(1130)),
                 Arguments.of(IBAN_WHITESPACE_3, BigDecimal.valueOf(1130))
         );
+    }
+
+    private static Stream<Arguments> transferToMissingAccountParameters() {
+        return Stream.of(
+                Arguments.of(IBAN_1, IBAN_5, BigDecimal.valueOf(1000), ERROR_MSG_PAYEE_NOT_FOUND.formatted(IBAN_5)),
+                Arguments.of(IBAN_2, IBAN_6, BigDecimal.valueOf(8750), ERROR_MSG_PAYEE_NOT_FOUND.formatted(IBAN_6)),
+                Arguments.of(IBAN_3, IBAN_WO_EMAIL, BigDecimal.valueOf(550.50),
+                        ERROR_MSG_PAYEE_NOT_FOUND.formatted(IBAN_WO_EMAIL)),
+                Arguments.of(IBAN_WHITESPACE_1, IBAN_1, BigDecimal.valueOf(1130),
+                        ERROR_MSG_PAYER_NOT_FOUND.formatted(IBAN_WHITESPACE_1)),
+                Arguments.of(IBAN_WHITESPACE_2, IBAN_2, BigDecimal.valueOf(1130),
+                        ERROR_MSG_PAYER_NOT_FOUND.formatted(IBAN_WHITESPACE_2)),
+                Arguments.of(IBAN_WHITESPACE_3, IBAN_3, BigDecimal.valueOf(1130),
+                        ERROR_MSG_PAYER_NOT_FOUND.formatted(IBAN_WHITESPACE_3)),
+                Arguments.of(IBAN_5, IBAN_6, BigDecimal.valueOf(897.57), ERROR_MSG_PAYER_NOT_FOUND.formatted(IBAN_5)),
+                Arguments.of(IBAN_6, IBAN_5, BigDecimal.valueOf(897.57), ERROR_MSG_PAYER_NOT_FOUND.formatted(IBAN_6)),
+                Arguments.of(IBAN_WHITESPACE_1, IBAN_INVALID_EMAIL, BigDecimal.valueOf(897.57),
+                        ERROR_MSG_PAYER_NOT_FOUND.formatted(IBAN_WHITESPACE_1))
+                );
     }
 }
