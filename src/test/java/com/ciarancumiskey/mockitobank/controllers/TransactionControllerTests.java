@@ -199,6 +199,24 @@ public class TransactionControllerTests {
     }
 
     @ParameterizedTest
+    @MethodSource("transferTooMuchParameters")
+    void transferTooMuchMoneyTest(final String payerIban, final String recipientIban, final BigDecimal amount) throws Exception {
+        final MockHttpServletRequest request = new MockHttpServletRequest();
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+
+        final TransactionRequest depositRequest = new TransactionRequest(TRANSFER, recipientIban, payerIban, amount, "me money needing a lot now");
+        when(transactionService.transferMoney(any(TransactionRequest.class))).thenThrow(new InvalidArgumentsException(ERROR_MSG_NOT_ENOUGH_MONEY));
+
+        // Verify that the account's balance has increased by the deposit amount
+        final MvcResult depositMvcResult = sendTransactionRequest(depositRequest, status().isBadRequest());
+        assertNotNull(depositMvcResult);
+        assertNotNull(depositMvcResult.getResponse());
+        final String depositResultContent = depositMvcResult.getResponse().getContentAsString();
+        assertFalse(depositResultContent.isBlank());
+        assertTrue(depositResultContent.contains(ERROR_MSG_NOT_ENOUGH_MONEY));
+    }
+
+    @ParameterizedTest
     @MethodSource("missingAccountParameters")
     void depositWithMissingAccountTests(final String payeeIban, final BigDecimal transactionAmount) throws Exception {
         final TransactionRequest transactionRequest = new TransactionRequest(DEPOSIT, payeeIban, null, transactionAmount, "404 time");
@@ -310,6 +328,23 @@ public class TransactionControllerTests {
                 Arguments.of(IBAN_4, BigDecimal.valueOf(12345678)),
                 Arguments.of(IBAN_4, BigDecimal.valueOf(123456789)),
                 Arguments.of(IBAN_4, BigDecimal.valueOf(200000))
+        );
+    }
+
+    private static Stream<Arguments> transferTooMuchParameters(){
+        return Stream.of(
+                Arguments.of(IBAN_1, IBAN_2, BigDecimal.valueOf(20000)),
+                Arguments.of(IBAN_1, IBAN_3, BigDecimal.valueOf(Long.MAX_VALUE)),
+                Arguments.of(IBAN_1, IBAN_4, BigDecimal.valueOf(123456)),
+                Arguments.of(IBAN_2, IBAN_1, BigDecimal.valueOf(123456)),
+                Arguments.of(IBAN_2, IBAN_3, BigDecimal.valueOf(1234567)),
+                Arguments.of(IBAN_2, IBAN_4, BigDecimal.valueOf(12345678)),
+                Arguments.of(IBAN_3, IBAN_1, BigDecimal.valueOf(123456)),
+                Arguments.of(IBAN_3, IBAN_2, BigDecimal.valueOf(1234567)),
+                Arguments.of(IBAN_3, IBAN_4, BigDecimal.valueOf(12345678)),
+                Arguments.of(IBAN_4, IBAN_1, BigDecimal.valueOf(54321)),
+                Arguments.of(IBAN_4, IBAN_2, BigDecimal.valueOf(123456789)),
+                Arguments.of(IBAN_4, IBAN_3, BigDecimal.valueOf(200000))
         );
     }
 
