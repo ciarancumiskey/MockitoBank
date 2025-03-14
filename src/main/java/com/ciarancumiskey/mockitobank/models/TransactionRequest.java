@@ -16,4 +16,5 @@ public class TransactionRequest {
     private final String payee;
     private final String payer;
     @NonNull private final BigDecimal amount;
+    private final String description;
 }

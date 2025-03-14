@@ -113,7 +113,7 @@ public class TransactionControllerTests {
         final MockHttpServletRequest request = new MockHttpServletRequest();
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 
-        final TransactionRequest depositRequest = new TransactionRequest(DEPOSIT, recipientIban, "DEPOSIT", amount);
+        final TransactionRequest depositRequest = new TransactionRequest(DEPOSIT, recipientIban, "DEPOSIT", amount, "Test");
         final TransactionResponse expectedResponse = new TransactionResponse();
         expectedResponse.updatePayeeBalance(expectedBalance);
         when(transactionService.transferMoney(any(TransactionRequest.class))).thenReturn(expectedResponse);
@@ -138,7 +138,7 @@ public class TransactionControllerTests {
         final MockHttpServletRequest request = new MockHttpServletRequest();
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 
-        final TransactionRequest depositRequest = new TransactionRequest(WITHDRAWAL, recipientIban, "DEPOSIT", amount);
+        final TransactionRequest depositRequest = new TransactionRequest(WITHDRAWAL, recipientIban, "DEPOSIT", amount, "Test");
         final TransactionResponse expectedResponse = new TransactionResponse();
         expectedResponse.updatePayerBalance(expectedBalance);
         when(transactionService.transferMoney(any(TransactionRequest.class))).thenReturn(expectedResponse);
@@ -163,7 +163,7 @@ public class TransactionControllerTests {
         final MockHttpServletRequest request = new MockHttpServletRequest();
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 
-        final TransactionRequest depositRequest = new TransactionRequest(WITHDRAWAL, recipientIban, "DEPOSIT", amount);
+        final TransactionRequest depositRequest = new TransactionRequest(WITHDRAWAL, "WITHDRAWAL", recipientIban, amount, "me money needing a lot now");
         when(transactionService.transferMoney(any(TransactionRequest.class))).thenThrow(new InvalidArgumentsException(ERROR_MSG_NOT_ENOUGH_MONEY));
 
         // Verify that the account's balance has increased by the deposit amount
@@ -179,7 +179,7 @@ public class TransactionControllerTests {
     @ParameterizedTest
     @MethodSource("missingAccountParameters")
     void depositWithMissingAccountTests(final String payeeIban, final BigDecimal transactionAmount) throws Exception {
-        final TransactionRequest transactionRequest = new TransactionRequest(DEPOSIT, payeeIban, null, transactionAmount);
+        final TransactionRequest transactionRequest = new TransactionRequest(DEPOSIT, payeeIban, null, transactionAmount, "404 time");
         final String expectedErrorMessage = Constants.ERROR_MSG_PAYEE_NOT_FOUND.formatted(payeeIban);
         when(transactionService.transferMoney(any(TransactionRequest.class))).thenThrow(new NotFoundException(expectedErrorMessage));
 
@@ -195,9 +195,9 @@ public class TransactionControllerTests {
 
     @ParameterizedTest
     @MethodSource("missingAccountParameters")
-    void withdrawWithMissingAccountTests(final String payeeIban, final BigDecimal transactionAmount) throws Exception {
-        final TransactionRequest transactionRequest = new TransactionRequest(WITHDRAWAL, payeeIban, null, transactionAmount);
-        final String expectedErrorMessage = Constants.ERROR_MSG_PAYER_NOT_FOUND.formatted(payeeIban);
+    void withdrawWithMissingAccountTests(final String nonexistentIban, final BigDecimal transactionAmount) throws Exception {
+        final TransactionRequest transactionRequest = new TransactionRequest(WITHDRAWAL, null, nonexistentIban, transactionAmount, "This account shouldn't exist");
+        final String expectedErrorMessage = Constants.ERROR_MSG_PAYER_NOT_FOUND.formatted(nonexistentIban);
         when(transactionService.transferMoney(any(TransactionRequest.class))).thenThrow(new NotFoundException(expectedErrorMessage));
 
         final MvcResult accountGetMvcResult = TestUtils.sendPostRequest(transactionsMockMvc,
