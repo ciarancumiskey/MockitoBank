@@ -13,9 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Transaction operations")
 @RequestMapping(path = Constants.TRANSACTIONS_PATH)
@@ -52,4 +50,36 @@ public interface ITransactionController {
     @PostMapping(value = Constants.TRANSFER_PATH, consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
     String transferMoney(@Valid @RequestBody final TransactionRequest transaction) throws NotFoundException, InvalidArgumentsException;
+
+    @Operation(summary = "Get transactions of account")
+    @ApiResponses(
+            value = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Account history retrieved",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ResponseEntity.class))),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Bad request",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ResponseEntity.class))),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Account not found",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ResponseEntity.class))),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "Internal service error",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ResponseEntity.class)))
+            })
+    @GetMapping(value = Constants.HISTORY_PATH,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    String getTransactionHistory(@Valid @PathVariable final String accountIban) throws InvalidArgumentsException, NotFoundException;
 }

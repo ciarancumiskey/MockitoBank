@@ -19,6 +19,7 @@ public class Constants {
     public static final String DELETE_PATH = "/delete/{accountIban}";
     public static final String TRANSACTIONS_PATH = "/transactions";
     public static final String TRANSFER_PATH = "/transfer";
+    public static final String HISTORY_PATH = "/history/{accountIban}";
 
     // Regex
     public final static Pattern SORT_CODE_REGEX = Pattern.compile("[0-9]{6}");

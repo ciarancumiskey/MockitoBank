@@ -25,5 +25,9 @@ public class TransactionController implements ITransactionController {
         return g.toJson(transactionResponse);
     }
 
-    //todo get transaction history of account
+    @Override
+    public String getTransactionHistory(String accountIban) throws InvalidArgumentsException, NotFoundException {
+        //todo get transaction history of account
+        return null;
+    }
 }
