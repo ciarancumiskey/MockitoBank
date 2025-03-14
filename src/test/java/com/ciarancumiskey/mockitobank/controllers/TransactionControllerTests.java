@@ -22,6 +22,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -50,10 +51,7 @@ import static com.ciarancumiskey.mockitobank.utils.TestConstants.SORT_CODE_2;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.SORT_CODE_3;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.SORT_CODE_4;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.TEST_BIC;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -119,8 +117,7 @@ public class TransactionControllerTests {
         when(transactionService.transferMoney(any(TransactionRequest.class))).thenReturn(expectedResponse);
 
         // Verify that the account's balance has increased by the deposit amount
-        final MvcResult depositMvcResult = TestUtils.sendPostRequest(transactionsMockMvc,
-                TRANSACTIONS_PATH + TRANSFER_PATH, TestUtils.asJsonString(depositRequest), status().isOk());
+        final MvcResult depositMvcResult = sendTransactionRequest(depositRequest, status().isOk());
         assertNotNull(depositMvcResult);
         assertNotNull(depositMvcResult.getResponse());
         final String depositResultContent = depositMvcResult.getResponse().getContentAsString();
@@ -138,14 +135,13 @@ public class TransactionControllerTests {
         final MockHttpServletRequest request = new MockHttpServletRequest();
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 
-        final TransactionRequest depositRequest = new TransactionRequest(WITHDRAWAL, recipientIban, "DEPOSIT", amount, "Test");
+        final TransactionRequest withdrawalRequest = new TransactionRequest(WITHDRAWAL, recipientIban, "DEPOSIT", amount, "Test");
         final TransactionResponse expectedResponse = new TransactionResponse();
         expectedResponse.updatePayerBalance(expectedBalance);
         when(transactionService.transferMoney(any(TransactionRequest.class))).thenReturn(expectedResponse);
 
         // Verify that the account's balance has increased by the deposit amount
-        final MvcResult depositMvcResult = TestUtils.sendPostRequest(transactionsMockMvc,
-                TRANSACTIONS_PATH + TRANSFER_PATH, TestUtils.asJsonString(depositRequest), status().isOk());
+        final MvcResult depositMvcResult = sendTransactionRequest(withdrawalRequest, status().isOk());
         assertNotNull(depositMvcResult);
         assertNotNull(depositMvcResult.getResponse());
         final String depositResultContent = depositMvcResult.getResponse().getContentAsString();
@@ -167,8 +163,7 @@ public class TransactionControllerTests {
         when(transactionService.transferMoney(any(TransactionRequest.class))).thenThrow(new InvalidArgumentsException(ERROR_MSG_NOT_ENOUGH_MONEY));
 
         // Verify that the account's balance has increased by the deposit amount
-        final MvcResult depositMvcResult = TestUtils.sendPostRequest(transactionsMockMvc,
-                TRANSACTIONS_PATH + TRANSFER_PATH, TestUtils.asJsonString(depositRequest), status().isBadRequest());
+        final MvcResult depositMvcResult = sendTransactionRequest(depositRequest, status().isBadRequest());
         assertNotNull(depositMvcResult);
         assertNotNull(depositMvcResult.getResponse());
         final String depositResultContent = depositMvcResult.getResponse().getContentAsString();
@@ -183,8 +178,7 @@ public class TransactionControllerTests {
         final String expectedErrorMessage = Constants.ERROR_MSG_PAYEE_NOT_FOUND.formatted(payeeIban);
         when(transactionService.transferMoney(any(TransactionRequest.class))).thenThrow(new NotFoundException(expectedErrorMessage));
 
-        final MvcResult accountGetMvcResult = TestUtils.sendPostRequest(transactionsMockMvc,
-                TRANSACTIONS_PATH + TRANSFER_PATH, TestUtils.asJsonString(transactionRequest), status().isNotFound());
+        final MvcResult accountGetMvcResult = sendTransactionRequest(transactionRequest, status().isNotFound());
         final String errorResponseString = accountGetMvcResult.getResponse().getContentAsString();
         log.info("Error content: {}", errorResponseString);
         assertTrue(errorResponseString.contains(expectedErrorMessage),
@@ -200,14 +194,25 @@ public class TransactionControllerTests {
         final String expectedErrorMessage = Constants.ERROR_MSG_PAYER_NOT_FOUND.formatted(nonexistentIban);
         when(transactionService.transferMoney(any(TransactionRequest.class))).thenThrow(new NotFoundException(expectedErrorMessage));
 
-        final MvcResult accountGetMvcResult = TestUtils.sendPostRequest(transactionsMockMvc,
-                TRANSACTIONS_PATH + TRANSFER_PATH, TestUtils.asJsonString(transactionRequest), status().isNotFound());
+        final MvcResult accountGetMvcResult = sendTransactionRequest(transactionRequest, status().isNotFound());
         final String errorResponseString = accountGetMvcResult.getResponse().getContentAsString();
         log.info("Error content: {}", errorResponseString);
         assertTrue(errorResponseString.contains(expectedErrorMessage),
                 "Error message was actually " + errorResponseString);
         // Verify the amount of times findAccountByIban() was called
         verify(transactionService, times(1)).transferMoney(any(TransactionRequest.class));
+    }
+
+    private MvcResult sendTransactionRequest(final TransactionRequest transactionRequest,
+                                             final ResultMatcher expectedStatus){
+        try {
+            return TestUtils.sendPostRequest(transactionsMockMvc,
+                    TRANSACTIONS_PATH + TRANSFER_PATH, TestUtils.asJsonString(transactionRequest), expectedStatus);
+        } catch (final Exception e) {
+            log.error("Failed to send transaction request.", e);
+            fail();
+            throw new RuntimeException(e);
+        }
     }
 
     private static Stream<Arguments> depositParameters() {
