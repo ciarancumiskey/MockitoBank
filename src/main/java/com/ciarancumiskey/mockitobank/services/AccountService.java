@@ -33,6 +33,7 @@ public class AccountService {
         // Validate the account
         validateAccountDetails(sortCode, accountNumber, accountName);
         final Account newAccount = new Account(bankIdentifierCode, sortCode, accountName, accountNumber, emailAddress);
+        validateAccountNewEmail(newAccount, emailAddress);
         // Verify that the new account doesn't clash with an existing one
         final String newAccountIban = newAccount.getIbanCode();
         final Optional<Account> existingAccountOpt = accountDbRepository.findById(newAccountIban);
@@ -66,14 +67,8 @@ public class AccountService {
                 account.setAccountName(accountName);
             }
             final String emailAddress = accountUpdateRequest.getEmailAddress();
-            if(EMAIL_REGEX.matcher(emailAddress).find()){
-                account.setEmailAddress(emailAddress);
-            } else if (EMAIL_REGEX.matcher(emailAddress.trim()).find()) {
-                account.setEmailAddress(emailAddress.trim());
-            } else {
-                log.error("Entered email address {} isn't in the requested format \"username@emailprovider.tld\".", emailAddress);
-            }
-            account.setIbanCode(MOCKITO_BANK_IBAN_PREFIX + account.getSortCode() + account.getAccountNumber());
+            validateAccountNewEmail(account, emailAddress);
+            account.setIbanCode(bankIdentifierCode + account.getSortCode() + account.getAccountNumber());
             // Overwrite the account
             accountDbRepository.save(account);
             return account;

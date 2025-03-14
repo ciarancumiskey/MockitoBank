@@ -2,10 +2,12 @@ package com.ciarancumiskey.mockitobank.controllers;
 
 import com.ciarancumiskey.mockitobank.exceptions.InvalidArgumentsException;
 import com.ciarancumiskey.mockitobank.exceptions.NotFoundException;
+import com.ciarancumiskey.mockitobank.models.Transaction;
 import com.ciarancumiskey.mockitobank.models.TransactionRequest;
 import com.ciarancumiskey.mockitobank.models.TransactionResponse;
 import com.ciarancumiskey.mockitobank.services.TransactionService;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RestController;
@@ -27,7 +29,7 @@ public class TransactionController implements ITransactionController {
 
     @Override
     public String getTransactionHistory(String accountIban) throws InvalidArgumentsException, NotFoundException {
-        //todo get transaction history of account
-        return null;
+        final List<Transaction> transactionList = transactionService.getTransactionHistory(accountIban);
+        return g.toJson(transactionList);
     }
 }

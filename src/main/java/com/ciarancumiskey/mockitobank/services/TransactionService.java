@@ -12,6 +12,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 
 import static com.ciarancumiskey.mockitobank.utils.Constants.*;
@@ -48,8 +51,19 @@ public class TransactionService {
         return transactionResponse;
     }
 
+    public List<Transaction> getTransactionHistory(final String accountIban)
+            throws InvalidArgumentsException, NotFoundException {
+        verifyTransactionParty(accountIban, ERROR_MSG_IBAN_NOT_FOUND.formatted(accountIban));
+        final List<Transaction> transactions = new ArrayList<>(transactionDbRepository.findAllByPayee(accountIban));
+        transactions.addAll(transactionDbRepository.findAllByPayer(accountIban));
+        // Order by date
+        transactions.sort(Comparator.comparing(Transaction::getTransactionTime));
+        return transactions;
+    }
+
     private void depositMoney(final TransactionRequest transactionRequest,
-                              final TransactionResponse transactionResponse) throws NotFoundException {
+                              final TransactionResponse transactionResponse)
+            throws InvalidArgumentsException, NotFoundException {
         final BigDecimal transactionAmount = transactionRequest.getAmount();
         final String payeeIban = transactionRequest.getPayee();
         final Account payeeAccount = verifyTransactionParty(payeeIban, ERROR_MSG_PAYEE_NOT_FOUND.formatted(payeeIban));
@@ -63,7 +77,8 @@ public class TransactionService {
     }
 
     private void withdrawMoney(final TransactionRequest transactionRequest,
-                              final TransactionResponse transactionResponse) throws NotFoundException, InvalidArgumentsException {
+                              final TransactionResponse transactionResponse)
+            throws InvalidArgumentsException, NotFoundException {
         final BigDecimal transactionAmount = transactionRequest.getAmount();
         final String payerIban = transactionRequest.getPayer();
         final Account payerAccount = verifyTransactionParty(payerIban, ERROR_MSG_PAYER_NOT_FOUND.formatted(payerIban));
@@ -83,7 +98,11 @@ public class TransactionService {
         }
     }
 
-    private Account verifyTransactionParty(final String ibanToFind, final String errorMsgIfNotFound) throws NotFoundException {
+    private Account verifyTransactionParty(final String ibanToFind, final String errorMsgIfNotFound)
+            throws InvalidArgumentsException, NotFoundException {
+        if(ibanToFind == null || ibanToFind.length() != 22) {
+            throw new InvalidArgumentsException(ERROR_MSG_INVALID_IBAN);
+        }
         final Optional<Account> optTransactionPartyAc = accountDbRepository.findById(ibanToFind);
         if(optTransactionPartyAc.isEmpty()){
             throw new NotFoundException(errorMsgIfNotFound);
