@@ -29,8 +29,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import java.math.BigDecimal;
 import java.util.stream.Stream;
 
-import static com.ciarancumiskey.mockitobank.models.TransactionType.DEPOSIT;
-import static com.ciarancumiskey.mockitobank.models.TransactionType.WITHDRAWAL;
+import static com.ciarancumiskey.mockitobank.models.TransactionType.*;
 import static com.ciarancumiskey.mockitobank.utils.Constants.*;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.AC_NUMBER_1;
 import static com.ciarancumiskey.mockitobank.utils.TestConstants.AC_NUMBER_2;
@@ -131,11 +130,11 @@ public class TransactionControllerTests {
 
     @ParameterizedTest
     @MethodSource("withdrawalParameters")
-    void withdrawMoneyTest(final String recipientIban, final BigDecimal amount, final BigDecimal expectedBalance) throws Exception {
+    void withdrawMoneyTest(final String payerIban, final BigDecimal amount, final BigDecimal expectedBalance) throws Exception {
         final MockHttpServletRequest request = new MockHttpServletRequest();
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 
-        final TransactionRequest withdrawalRequest = new TransactionRequest(WITHDRAWAL, recipientIban, "DEPOSIT", amount, "Test");
+        final TransactionRequest withdrawalRequest = new TransactionRequest(WITHDRAWAL, payerIban, "DEPOSIT", amount, "Test");
         final TransactionResponse expectedResponse = new TransactionResponse();
         expectedResponse.updatePayerBalance(expectedBalance);
         when(transactionService.transferMoney(any(TransactionRequest.class))).thenReturn(expectedResponse);
@@ -151,6 +150,34 @@ public class TransactionControllerTests {
         assertNotNull(transactionResponse);
         assertNotNull(transactionResponse.getUpdatedAccountBalances());
         assertEquals(expectedBalance, transactionResponse.getUpdatedAccountBalances().get("payer"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("transferParameters")
+    void transferMoneyTest(final String payerIban, final String recipientIban, final BigDecimal amount,
+                           final BigDecimal expectedPayerBalance, final BigDecimal expectedPayeeBalance) throws Exception {
+        final MockHttpServletRequest request = new MockHttpServletRequest();
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+
+        final TransactionRequest withdrawalRequest = new TransactionRequest(TRANSFER, recipientIban, payerIban,
+                amount, "Test");
+        final TransactionResponse expectedResponse = new TransactionResponse();
+        expectedResponse.updatePayeeBalance(expectedPayeeBalance);
+        expectedResponse.updatePayerBalance(expectedPayerBalance);
+        when(transactionService.transferMoney(any(TransactionRequest.class))).thenReturn(expectedResponse);
+
+        // Verify that the account's balance has increased by the deposit amount
+        final MvcResult depositMvcResult = sendTransactionRequest(withdrawalRequest, status().isOk());
+        assertNotNull(depositMvcResult);
+        assertNotNull(depositMvcResult.getResponse());
+        final String depositResultContent = depositMvcResult.getResponse().getContentAsString();
+        assertFalse(depositResultContent.isBlank());
+        final TransactionResponse transactionResponse = (TransactionResponse)
+                TestUtils.fromJsonString(depositResultContent, TransactionResponse.class);
+        assertNotNull(transactionResponse);
+        assertNotNull(transactionResponse.getUpdatedAccountBalances());
+        assertEquals(expectedPayeeBalance, transactionResponse.getUpdatedAccountBalances().get("payee"));
+        assertEquals(expectedPayerBalance, transactionResponse.getUpdatedAccountBalances().get("payer"));
     }
 
     @ParameterizedTest
@@ -245,6 +272,21 @@ public class TransactionControllerTests {
                 Arguments.of(IBAN_3, BigDecimal.valueOf(12300.37), BigDecimal.valueOf(-3165)),
                 Arguments.of(IBAN_3, BigDecimal.valueOf(10100.45), BigDecimal.valueOf(-964.92)),
                 Arguments.of(IBAN_3, BigDecimal.valueOf(10000), BigDecimal.valueOf(-865.37)));
+    }
+    // 10500, 8750, 9134.63, 1814.60
+    private static Stream<Arguments> transferParameters() {
+        return Stream.of(
+                Arguments.of(IBAN_1, IBAN_2, BigDecimal.valueOf(1000), BigDecimal.valueOf(9500), BigDecimal.valueOf(9750)),
+                Arguments.of(IBAN_2, IBAN_1, BigDecimal.valueOf(8750), BigDecimal.ZERO, BigDecimal.valueOf(19250)),
+                Arguments.of(IBAN_3, IBAN_4, BigDecimal.valueOf(550.50), BigDecimal.valueOf(8584.13), BigDecimal.valueOf(2365.1)),
+                Arguments.of(IBAN_4, IBAN_3, BigDecimal.valueOf(897.57), BigDecimal.valueOf(917.03), BigDecimal.valueOf(10032.2)),
+                // Test the accounts' overdrafts
+                Arguments.of(IBAN_1, IBAN_2, BigDecimal.valueOf(11300), BigDecimal.valueOf(-800), BigDecimal.valueOf(20050)),
+                Arguments.of(IBAN_1, IBAN_3, BigDecimal.valueOf(12000), BigDecimal.valueOf(-1500), BigDecimal.valueOf(21134.63)),
+                Arguments.of(IBAN_1, IBAN_4, BigDecimal.valueOf(18600.99), BigDecimal.valueOf(-8099.01), BigDecimal.valueOf(20415.59)),
+                Arguments.of(IBAN_3, IBAN_1, BigDecimal.valueOf(12300.37), BigDecimal.valueOf(-3165), BigDecimal.valueOf(22800.37)),
+                Arguments.of(IBAN_3, IBAN_2, BigDecimal.valueOf(10100.45), BigDecimal.valueOf(-964.92), BigDecimal.valueOf(18850.45)),
+                Arguments.of(IBAN_3, IBAN_4, BigDecimal.valueOf(10000), BigDecimal.valueOf(-865.37), BigDecimal.valueOf(11814.6)));
     }
 
     private static Stream<Arguments> withdrawTooMuchParameters(){

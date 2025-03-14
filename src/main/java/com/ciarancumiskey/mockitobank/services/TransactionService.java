@@ -37,6 +37,9 @@ public class TransactionService {
                 depositMoney(transactionRequest, transactionResponse);
                 break;
             case TRANSFER:
+                // Try withdrawing first, to check that the payer has enough money
+                withdrawMoney(transactionRequest, transactionResponse);
+                depositMoney(transactionRequest, transactionResponse);
                 break;
             case WITHDRAWAL:
                 withdrawMoney(transactionRequest, transactionResponse);
