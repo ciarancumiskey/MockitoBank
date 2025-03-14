@@ -27,6 +27,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.time.LocalDateTime;
 import java.util.stream.Stream;
 
 import static com.ciarancumiskey.mockitobank.utils.Constants.*;
@@ -49,8 +50,11 @@ public class AccountControllerTests {
     @Mock
     private AccountServiceProperties accountServiceProperties;
 
+    private LocalDateTime testStartTime;
+
     @BeforeEach
     void setUp() {
+        testStartTime = LocalDateTime.now();
         // Set up the IBAN prefix for the test
         when(accountServiceProperties.getBankIdentifierCode()).thenReturn(TEST_BIC);
     }
@@ -371,7 +375,7 @@ public class AccountControllerTests {
         );
     }
 
-    private static void validateAccount(final String accountJsonString,
+    private void validateAccount(final String accountJsonString,
                                         final String expectedIbanCode, final String expectedAcNumber,
                                         final String expectedSortCode, final String expectedAcName, final String expectedEmailAddress){
         final Account parsedAccount = (Account) TestUtils.fromJsonString(accountJsonString, Account.class);
@@ -381,5 +385,6 @@ public class AccountControllerTests {
         assertEquals(expectedSortCode, parsedAccount.getSortCode());
         assertEquals(expectedAcName, parsedAccount.getAccountName());
         assertEquals(expectedEmailAddress, parsedAccount.getEmailAddress());
+        assertTrue(parsedAccount.getTimeAccountCreated().isAfter(testStartTime));
     }
 }

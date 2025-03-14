@@ -3,13 +3,13 @@ package com.ciarancumiskey.mockitobank.utils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import java.time.LocalDateTime;
 import java.util.regex.Pattern;
 
 public class Constants {
-    public final static Gson g = new GsonBuilder().create();
-
-    public final static String MOCKITO_BANK_BIC = "MOCKIE94";
-    public final static String MOCKITO_BANK_IBAN_PREFIX = "IE94MOCK";
+    // Allows LocalDateTime to be returned in response bodies
+    public final static Gson g = new GsonBuilder()
+            .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter()).create();
 
     // Controllers
     public final static String ACCOUNT_PATH = "/accounts";

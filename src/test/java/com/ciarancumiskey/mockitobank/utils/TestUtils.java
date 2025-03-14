@@ -1,6 +1,5 @@
 package com.ciarancumiskey.mockitobank.utils;
 
-import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -8,15 +7,16 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import static com.ciarancumiskey.mockitobank.utils.Constants.g;
+
 @Slf4j
 public class TestUtils {
-    private static final Gson gson = new Gson();
     public static String asJsonString(final Object obj) {
-        return gson.toJson(obj);
+        return g.toJson(obj);
     }
 
     public static Object fromJsonString(String accountJsonString, Class<?> targetClass) {
-        return gson.fromJson(accountJsonString, targetClass);
+        return g.fromJson(accountJsonString, targetClass);
     }
 
     public static MvcResult sendDeleteRequest(final MockMvc mvc, final String endpoint,
