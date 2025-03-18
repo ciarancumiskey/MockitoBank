@@ -4,7 +4,6 @@ import com.ciarancumiskey.mockitobank.exceptions.AlreadyExistsException;
 import com.ciarancumiskey.mockitobank.exceptions.InvalidArgumentsException;
 import com.ciarancumiskey.mockitobank.exceptions.NotFoundException;
 import com.ciarancumiskey.mockitobank.exceptions.ProblemDetails;
-import com.ciarancumiskey.mockitobank.models.Account;
 import com.ciarancumiskey.mockitobank.models.AccountCreationRequest;
 import com.ciarancumiskey.mockitobank.models.AccountUpdateRequest;
 import com.ciarancumiskey.mockitobank.utils.Constants;

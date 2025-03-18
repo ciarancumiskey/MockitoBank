@@ -1,7 +1,6 @@
 package com.ciarancumiskey.mockitobank.controllers;
 
 import com.ciarancumiskey.mockitobank.configuration.AccountServiceProperties;
-import com.ciarancumiskey.mockitobank.database.AccountDbRepository;
 import com.ciarancumiskey.mockitobank.exceptions.AlreadyExistsException;
 import com.ciarancumiskey.mockitobank.exceptions.InvalidArgumentsException;
 import com.ciarancumiskey.mockitobank.exceptions.NotFoundException;
@@ -18,7 +17,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -29,6 +27,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.time.LocalDateTime;
 import java.util.stream.Stream;
 
 import static com.ciarancumiskey.mockitobank.utils.Constants.*;
@@ -51,15 +50,14 @@ public class AccountControllerTests {
     @Mock
     private AccountServiceProperties accountServiceProperties;
 
-    @InjectMocks
-    private AccountService accountServiceWithMocks;
+    private LocalDateTime testStartTime;
 
     @BeforeEach
     void setUp() {
+        testStartTime = LocalDateTime.now();
         // Set up the IBAN prefix for the test
         when(accountServiceProperties.getBankIdentifierCode()).thenReturn(TEST_BIC);
     }
-
 
     @ParameterizedTest
     @MethodSource("createAccountsParameters")
@@ -291,7 +289,7 @@ public class AccountControllerTests {
             IBAN_WHITESPACE_1, IBAN_WHITESPACE_2, IBAN_WHITESPACE_3})
     void deleteNonExistentAccountsTest(final String nonexistentIban) throws Exception {
         final Account expectedOriginalAccount = new Account(accountServiceProperties.getBankIdentifierCode(), "234567", "Just Sumguy",
-                "12345678", "just.sumguy@someemail.com");
+                AC_NUMBER_1, "just.sumguy@someemail.com");
         expectedOriginalAccount.setIbanCode(UPDATED_IBAN_1);
         when(accountService.findAccountByIban(UPDATED_IBAN_1)).thenReturn(expectedOriginalAccount);
 
@@ -377,7 +375,7 @@ public class AccountControllerTests {
         );
     }
 
-    private static void validateAccount(final String accountJsonString,
+    private void validateAccount(final String accountJsonString,
                                         final String expectedIbanCode, final String expectedAcNumber,
                                         final String expectedSortCode, final String expectedAcName, final String expectedEmailAddress){
         final Account parsedAccount = (Account) TestUtils.fromJsonString(accountJsonString, Account.class);
@@ -387,5 +385,6 @@ public class AccountControllerTests {
         assertEquals(expectedSortCode, parsedAccount.getSortCode());
         assertEquals(expectedAcName, parsedAccount.getAccountName());
         assertEquals(expectedEmailAddress, parsedAccount.getEmailAddress());
+        assertTrue(parsedAccount.getTimeAccountCreated().isAfter(testStartTime));
     }
 }

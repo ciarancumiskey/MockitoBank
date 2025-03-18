@@ -9,8 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 
 import java.math.BigDecimal;
-
-import static com.ciarancumiskey.mockitobank.utils.Constants.MOCKITO_BANK_IBAN_PREFIX;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -26,7 +25,7 @@ public class Account {
     @NonNull BigDecimal balance;
     @NonNull BigDecimal overdraftLimit;
     String emailAddress;
-    //todo: transaction history
+    @NonNull final LocalDateTime timeAccountCreated;
     //todo: password
 
     public Account(@NonNull final String bankIdentifierCode, @NonNull final String sortCode, @NonNull final String accountName,
@@ -38,6 +37,7 @@ public class Account {
         this.ibanCode = bankIdentifierCode + sortCode + accountNumber;
         this.balance = BigDecimal.ZERO;
         this.overdraftLimit = BigDecimal.ZERO;
+        this.timeAccountCreated = LocalDateTime.now();
         if(Constants.EMAIL_REGEX.matcher(emailAddress).find()){
             this.emailAddress = emailAddress;
         } else {
@@ -51,33 +51,6 @@ public class Account {
 
     protected Account(){
         // Required for JPA entity
-    }
-
-    public boolean deposit(final BigDecimal depositAmount){
-        if(depositAmount.doubleValue() < 0) {
-            log.error("You can't deposit a negative amount.");
-            return false;
-        }
-        boolean depositSuccessful = adjustBalance(depositAmount);
-        return depositSuccessful;
-    }
-
-    public boolean withdraw(final BigDecimal withdrawalAmount){
-        if(withdrawalAmount.doubleValue() < 0){
-            log.error("You can't withdraw a negative amount.");
-            return false;
-        }
-        final BigDecimal adjustmentAmount = BigDecimal.ZERO.subtract(withdrawalAmount);
-        boolean withdrawalSuccessful = adjustBalance(adjustmentAmount);
-        return withdrawalSuccessful;
-    }
-
-    private boolean adjustBalance(final BigDecimal adjustmentAmount) {
-        if((this.balance.doubleValue() + adjustmentAmount.doubleValue()) < BigDecimal.ZERO.subtract(this.overdraftLimit).doubleValue()){
-            log.error("Withdrawal rejected, your balance would be {} and exceed your overdraft of {}.", (this.balance.doubleValue() + adjustmentAmount.doubleValue()), this.overdraftLimit);
-            return false;
-        }
-        this.balance.add(adjustmentAmount);
-        return true;
+        this.timeAccountCreated = LocalDateTime.now();
     }
 }
