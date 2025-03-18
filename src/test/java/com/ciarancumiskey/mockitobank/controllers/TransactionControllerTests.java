@@ -318,6 +318,17 @@ public class TransactionControllerTests {
         assertTrue(accountNotFoundResponse.getContentAsString().contains(expectedErrorMsg));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {IBAN_FAIL_1, IBAN_FAIL_2, IBAN_FAIL_3, IBAN_FAIL_4, IBAN_FAIL_5, IBAN_FAIL_6, " ", "\n", "\t\t"})
+    void testGettingTransactionHistoryForInvalidAccount(final String iban) throws Exception {
+        when(transactionService.getTransactionHistory(iban)).thenThrow(new InvalidArgumentsException(ERROR_MSG_INVALID_IBAN));
+
+        final MvcResult transactionHistoryResult = TestUtils.sendGetRequest(transactionsMockMvc,
+                TRANSACTIONS_PATH + HISTORY_PATH.replace("{accountIban}", iban), status().isBadRequest());
+        MockHttpServletResponse accountNotFoundResponse = transactionHistoryResult.getResponse();
+        assertTrue(accountNotFoundResponse.getContentAsString().contains(ERROR_MSG_INVALID_IBAN));
+    }
+
     private MvcResult sendTransactionRequest(final TransactionRequest transactionRequest,
                                              final ResultMatcher expectedStatus){
         try {
