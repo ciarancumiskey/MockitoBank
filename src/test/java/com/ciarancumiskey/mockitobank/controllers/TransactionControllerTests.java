@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -37,25 +38,7 @@ import java.util.stream.Stream;
 
 import static com.ciarancumiskey.mockitobank.models.TransactionType.*;
 import static com.ciarancumiskey.mockitobank.utils.Constants.*;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.AC_NUMBER_1;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.AC_NUMBER_2;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.AC_NUMBER_3;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_1;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_2;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_3;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_4;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_5;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_6;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_INVALID_EMAIL;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_WHITESPACE_1;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_WHITESPACE_2;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_WHITESPACE_3;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.IBAN_WO_EMAIL;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.SORT_CODE_1;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.SORT_CODE_2;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.SORT_CODE_3;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.SORT_CODE_4;
-import static com.ciarancumiskey.mockitobank.utils.TestConstants.TEST_BIC;
+import static com.ciarancumiskey.mockitobank.utils.TestConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
@@ -320,6 +303,19 @@ public class TransactionControllerTests {
         } catch (final Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {IBAN_4, IBAN_5, IBAN_6, UPDATED_IBAN_1, IBAN_WHITESPACE_1, IBAN_WHITESPACE_2,
+            IBAN_WHITESPACE_3, IBAN_WO_EMAIL, IBAN_INVALID_EMAIL})
+    void testGettingTransactionHistoryForNonexistentAccount(final String iban) throws Exception {
+        final String expectedErrorMsg = ERROR_MSG_IBAN_NOT_FOUND.formatted(iban);
+        when(transactionService.getTransactionHistory(iban)).thenThrow(new NotFoundException(expectedErrorMsg));
+
+        final MvcResult transactionHistoryResult = TestUtils.sendGetRequest(transactionsMockMvc,
+                TRANSACTIONS_PATH + HISTORY_PATH.replace("{accountIban}", iban), status().isNotFound());
+        MockHttpServletResponse accountNotFoundResponse = transactionHistoryResult.getResponse();
+        assertTrue(accountNotFoundResponse.getContentAsString().contains(expectedErrorMsg));
     }
 
     private MvcResult sendTransactionRequest(final TransactionRequest transactionRequest,
