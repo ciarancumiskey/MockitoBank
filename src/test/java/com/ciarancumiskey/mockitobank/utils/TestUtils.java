@@ -7,6 +7,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import java.util.List;
+
 import static com.ciarancumiskey.mockitobank.utils.Constants.g;
 
 @Slf4j
@@ -17,6 +19,10 @@ public class TestUtils {
 
     public static Object fromJsonString(String accountJsonString, Class<?> targetClass) {
         return g.fromJson(accountJsonString, targetClass);
+    }
+
+    public static <T> List<T> fromJsonStringList(String accountJsonString, Class<T> targetClass) {
+        return g.fromJson(accountJsonString, new ParameterisedTypeList<T>(targetClass));
     }
 
     public static MvcResult sendDeleteRequest(final MockMvc mvc, final String endpoint,

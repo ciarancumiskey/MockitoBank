@@ -4,6 +4,7 @@ import com.ciarancumiskey.mockitobank.configuration.AccountServiceProperties;
 import com.ciarancumiskey.mockitobank.exceptions.InvalidArgumentsException;
 import com.ciarancumiskey.mockitobank.exceptions.NotFoundException;
 import com.ciarancumiskey.mockitobank.models.Account;
+import com.ciarancumiskey.mockitobank.models.Transaction;
 import com.ciarancumiskey.mockitobank.models.TransactionRequest;
 import com.ciarancumiskey.mockitobank.models.TransactionResponse;
 import com.ciarancumiskey.mockitobank.services.AccountService;
@@ -12,13 +13,16 @@ import com.ciarancumiskey.mockitobank.utils.Constants;
 import com.ciarancumiskey.mockitobank.utils.TestUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -26,7 +30,9 @@ import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.stream.Stream;
 
 import static com.ciarancumiskey.mockitobank.models.TransactionType.*;
@@ -266,6 +272,56 @@ public class TransactionControllerTests {
         verify(transactionService, times(1)).transferMoney(any(TransactionRequest.class));
     }
 
+    @Test
+    void testGettingTransactionHistory(){
+        final TransactionRequest transactionReq1 = new TransactionRequest(DEPOSIT, IBAN_1, "", BigDecimal.valueOf(3000), "Salary");
+        final TransactionResponse transactionResp1 = new TransactionResponse();
+        transactionResp1.updatePayeeBalance(BigDecimal.valueOf(13500));
+        final TransactionRequest transactionReq2 = new TransactionRequest(TRANSFER, IBAN_2, IBAN_1, BigDecimal.valueOf(400), "Venmo");
+        final TransactionResponse transactionResp2 = new TransactionResponse();
+        transactionResp2.updatePayeeBalance(BigDecimal.valueOf(9150));
+        transactionResp2.updatePayerBalance(BigDecimal.valueOf(13100));
+        final TransactionRequest transactionReq3 = new TransactionRequest(TRANSFER, IBAN_1, IBAN_3, BigDecimal.valueOf(300), "Refund");
+        final TransactionResponse transactionResp3 = new TransactionResponse();
+        transactionResp3.updatePayeeBalance(BigDecimal.valueOf(13400));
+        transactionResp3.updatePayerBalance(BigDecimal.valueOf(8834.63));
+        final TransactionRequest transactionReq4 = new TransactionRequest(WITHDRAWAL, "", IBAN_1, BigDecimal.valueOf(3000), "ATM");
+        final TransactionResponse transactionResp4 = new TransactionResponse();
+        transactionResp4.updatePayerBalance(BigDecimal.valueOf(10400));
+        try {
+            when(transactionService.transferMoney(transactionReq1)).thenReturn(transactionResp1);
+            when(transactionService.transferMoney(transactionReq2)).thenReturn(transactionResp2);
+            when(transactionService.transferMoney(transactionReq3)).thenReturn(transactionResp3);
+            when(transactionService.transferMoney(transactionReq4)).thenReturn(transactionResp4);
+
+            final Transaction expectedTransaction1 = new Transaction(IBAN_1, "", BigDecimal.valueOf(3000), "Salary");
+            final Transaction expectedTransaction2 = new Transaction(IBAN_2, IBAN_1, BigDecimal.valueOf(400), "Venmo");
+            final Transaction expectedTransaction3 = new Transaction(IBAN_1, IBAN_3, BigDecimal.valueOf(300), "Refund");
+            final Transaction expectedTransaction4 = new Transaction("", IBAN_1, BigDecimal.valueOf(3000), "ATM");
+
+            final List<Transaction> iban1Transactions = List.of(expectedTransaction1,
+                    expectedTransaction2, expectedTransaction3, expectedTransaction4);
+            when(transactionService.getTransactionHistory(IBAN_1)).thenReturn(iban1Transactions);
+            final MvcResult iban1TransactionHistory = TestUtils.sendGetRequest(transactionsMockMvc,
+                    TRANSACTIONS_PATH + HISTORY_PATH.replace("{accountIban}", IBAN_1), status().isOk());
+            validateTransactionHistoryResponse(iban1TransactionHistory, iban1Transactions);
+
+            final List<Transaction> iban2Transactions = List.of(expectedTransaction2);
+            when(transactionService.getTransactionHistory(IBAN_2)).thenReturn(iban2Transactions);
+            final MvcResult iban2TransactionHistory = TestUtils.sendGetRequest(transactionsMockMvc,
+                    TRANSACTIONS_PATH + HISTORY_PATH.replace("{accountIban}", IBAN_2), status().isOk());
+            validateTransactionHistoryResponse(iban2TransactionHistory, iban2Transactions);
+
+            final List<Transaction> iban3Transactions = List.of(expectedTransaction3);
+            when(transactionService.getTransactionHistory(IBAN_3)).thenReturn(iban3Transactions);
+            final MvcResult iban3TransactionHistory = TestUtils.sendGetRequest(transactionsMockMvc,
+                    TRANSACTIONS_PATH + HISTORY_PATH.replace("{accountIban}", IBAN_3), status().isOk());
+            validateTransactionHistoryResponse(iban3TransactionHistory, iban3Transactions);
+        } catch (final Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private MvcResult sendTransactionRequest(final TransactionRequest transactionRequest,
                                              final ResultMatcher expectedStatus){
         try {
@@ -274,6 +330,28 @@ public class TransactionControllerTests {
         } catch (final Exception e) {
             log.error("Failed to send transaction request.", e);
             fail();
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void validateTransactionHistoryResponse(final MvcResult transactionHistory, final List<Transaction> expectedTransactions){
+        MockHttpServletResponse response = transactionHistory.getResponse();
+        try {
+            String responseContent = response.getContentAsString();
+            assertFalse(responseContent.isBlank());
+            final List<Transaction> parsedTransactions = TestUtils.fromJsonStringList(responseContent, Transaction.class);
+            assertNotNull(parsedTransactions);
+            assertEquals(expectedTransactions.size(), parsedTransactions.size());
+            for(final Transaction expectedTx : expectedTransactions) {
+                // Verify that the expected transaction is among the parsed transactions from the response
+                assertTrue(parsedTransactions.stream().anyMatch(parsedTx ->
+                        parsedTx.getAmount().equals(expectedTx.getAmount()) &&
+                        parsedTx.getDescription().equals(expectedTx.getDescription()) &&
+                        parsedTx.getPayeeAccount().equals(expectedTx.getPayeeAccount()) &&
+                        parsedTx.getPayerAccount().equals(expectedTx.getPayerAccount()) &&
+                        parsedTx.getTransactionTime().equals(expectedTx.getTransactionTime())));
+            }
+        } catch (final UnsupportedEncodingException e) {
             throw new RuntimeException(e);
         }
     }
