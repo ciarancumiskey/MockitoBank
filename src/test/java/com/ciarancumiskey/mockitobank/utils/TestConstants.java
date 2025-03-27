@@ -1,6 +1,7 @@
 package com.ciarancumiskey.mockitobank.utils;
 
 import org.junit.jupiter.params.provider.Arguments;
+import org.testcontainers.utility.DockerImageName;
 
 public class TestConstants {
     public static final String TEST_BIC = "IE94MOCK";
@@ -105,4 +106,7 @@ public class TestConstants {
     public static final Arguments USER_INVALID_WHITESPACE_NAME = Arguments.of(SORT_CODE_1, "     ", AC_NUMBER_1, "", Constants.ERROR_MSG_BLANK_AC_NAME);
     public static final Arguments USER_INVALID_TABS_NAME = Arguments.of(SORT_CODE_1, "\t\t\t", AC_NUMBER_1, "", Constants.ERROR_MSG_BLANK_AC_NAME);
     public static final Arguments USER_INVALID_NEWLINE_NAME = Arguments.of(SORT_CODE_1, "\n\n", AC_NUMBER_1, "", Constants.ERROR_MSG_BLANK_AC_NAME);
+
+    // Testcontainers
+    public static final DockerImageName MYSQL_80_IMAGE_NAME = DockerImageName.parse("mysql:8.0.36");
 }

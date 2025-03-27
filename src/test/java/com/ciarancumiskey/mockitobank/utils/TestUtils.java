@@ -6,7 +6,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.testcontainers.containers.MySQLContainer;
 
+import java.time.Duration;
 import java.util.List;
 
 import static com.ciarancumiskey.mockitobank.utils.Constants.g;
@@ -57,5 +59,14 @@ public class TestUtils {
                         .content(requestContent))
                         .andExpect(expectedStatusCode)
                         .andReturn();
+    }
+
+    // TestContainers
+    public static MySQLContainer<?> getMySqlEmulatorContainer() {
+        return new MySQLContainer<>(TestConstants.MYSQL_80_IMAGE_NAME)
+                .withDatabaseName("mockito_bank")
+                .withUsername("test")
+                .withPassword("test")
+                .withStartupTimeout(Duration.ofSeconds(60));
     }
 }
