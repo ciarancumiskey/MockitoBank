@@ -109,4 +109,5 @@ public class TestConstants {
 
     // Testcontainers
     public static final DockerImageName MYSQL_80_IMAGE_NAME = DockerImageName.parse("mysql:8.0.36");
+    public static final DockerImageName MOCKITO_BANK_LATEST = DockerImageName.parse("mockitobank:latest");
 }
